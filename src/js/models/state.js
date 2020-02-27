@@ -23,11 +23,6 @@ module.exports = HumanModel.define({
             self.markInactive();
         });
 
-        self.cacheStatus = app.cache.state;
-        app.cache.on('change', function (state) {
-            self.cacheStatus = state;
-        });
-
         document.addEventListener('deviceid', function (event) {
             self.deviceID = event.deviceid;
         });
@@ -45,7 +40,6 @@ module.exports = HumanModel.define({
         badge: 'string',
         pageTitle: 'string',
         hasActiveCall: ['boolean', false, false],
-        cacheStatus: 'string',
         deviceID: ['string', false, ''],
         pageChanged: ['string', false, '']
     },

@@ -34,7 +34,6 @@ module.exports = HumanView.extend({
     },
     classBindings: {
         connected: '#topbar',
-        cacheStatus: '#updateBar',
         hasActiveCall: '#wrapper',
         currentPageIsSettings: '.settings'
     },

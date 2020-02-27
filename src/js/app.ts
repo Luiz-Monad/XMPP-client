@@ -30,7 +30,6 @@ var xmppEventHandlers = require('./helpers/xmppEventHandlers')
 var pushNotifications = require('./helpers/pushNotifications')
 const Notify = require('notify.js')
 var Desktop = require('./helpers/desktop')
-var AppCache = require('./helpers/cache')
 const url = require('url')
 
 var SoundEffectManager = require('sound-effect-manager')
@@ -79,7 +78,6 @@ class App {
                 app.notifications = new Notify()
                 app.soundManager = new SoundEffectManager()
                 app.desktop = new Desktop()
-                app.cache = new AppCache()
                 app.storage = new Storage()
                 app.storage.open(cb)
                 app.composing = {}

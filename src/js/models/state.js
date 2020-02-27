@@ -17,12 +17,6 @@ module.exports = HumanModel.define({
             self.markActive();
         });
 
-        app.desktop.on('sleep', function () {
-            clearTimeout(this.idleTimer);
-            console.log('went to sleep');
-            self.markInactive();
-        });
-
         document.addEventListener('deviceid', function (event) {
             self.deviceID = event.deviceid;
         });

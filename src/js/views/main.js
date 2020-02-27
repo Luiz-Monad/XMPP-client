@@ -15,7 +15,6 @@ module.exports = HumanView.extend({
     template: templates.body,
     initialize: function () {
         this.listenTo(app.state, 'change:title', this.handleTitle);
-        app.desktop.updateBadge('');
         app.state.on('change:deviceID', function () {
             console.log('DEVICE ID>>>', app.state.deviceID);
         });
@@ -84,7 +83,6 @@ module.exports = HumanView.extend({
     },
     handleTitle: function (e) {
         document.title = app.state.title;
-        app.desktop.updateBadge(app.state.badge);
     },
     handleStatusChange: function (e) {
         var text = e.target.textContent;

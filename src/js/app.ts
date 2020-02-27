@@ -29,7 +29,6 @@ var Storage: StorageConstructor = require('./storage')
 var xmppEventHandlers = require('./helpers/xmppEventHandlers')
 var pushNotifications = require('./helpers/pushNotifications')
 const Notify = require('notify.js')
-var Desktop = require('./helpers/desktop')
 const url = require('url')
 
 var SoundEffectManager = require('sound-effect-manager')
@@ -77,7 +76,6 @@ class App {
             function (cb) {
                 app.notifications = new Notify()
                 app.soundManager = new SoundEffectManager()
-                app.desktop = new Desktop()
                 app.storage = new Storage()
                 app.storage.open(cb)
                 app.composing = {}

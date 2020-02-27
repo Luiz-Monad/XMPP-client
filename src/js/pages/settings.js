@@ -18,7 +18,6 @@ module.exports = BasePage.extend({
     },
     events: {
         'click .enableAlerts': 'enableAlerts',
-        'click .installFirefox': 'installFirefox',
         'click .soundNotifs': 'handleSoundNotifs',
         'dragover': 'handleAvatarChangeDragOver',
         'drop': 'handleAvatarChange',
@@ -38,13 +37,6 @@ module.exports = BasePage.extend({
                     });
                 }
             });
-        }
-    },
-    installFirefox: function () {
-        if (!app.desktop.installed) {
-            app.desktop.install();
-        } else {
-            app.desktop.uninstall();
         }
     },
     handleAvatarChangeDragOver: function (e) {

@@ -3,6 +3,13 @@
 var crypto = require('crypto');
 
 function fallback(jid) {
+    if(!SERVER_CONFIG.gravatar) {
+        return {
+            // TODO something nicer than a gray pixel?
+            uri: 'data:image/gif;base64,R0lGODdhAQABAIABAJmZmf///ywAAAAAAQABAAACAkQBADs='
+        };
+    }
+
     var gID = crypto.createHash('md5').update(jid).digest('hex');
     return {
         uri: 'https://gravatar.com/avatar/' + gID + '?s=80&d=mm'

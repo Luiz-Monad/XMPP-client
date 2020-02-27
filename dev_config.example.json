@@ -18,6 +18,7 @@
         "muc": "chat.example.com",
         "startup": "groupchat/room%40chat.example.com",
         "admin": "admin",
+        "gravatar": false,
         "keepalive": {
             "interval": 45,
             "timeout": 15

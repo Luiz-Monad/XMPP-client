@@ -96,7 +96,7 @@ module.exports = HumanModel.define({
         if (resource && resource.avatar) {
             return resource.avatar;
         }
-        return "https://www.gravatar.com/avatar/00000000000000000000000000000000?s=80&d=mm"
+        return SERVER_CONFIG.gravatar ? "https://www.gravatar.com/avatar/00000000000000000000000000000000?s=80&d=mm" : 'data:image/gif;base64,R0lGODdhAQABAIABAJmZmf///ywAAAAAAQABAAACAkQBADs='
     },
     addMessage: function (message, notify) {
         message.owner = me.jid.bare;

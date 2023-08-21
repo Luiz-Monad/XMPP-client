@@ -1,56 +1,56 @@
 const { series, parallel, src, dest, watch } = require('gulp');
 const batch = require('gulp-batch');
-const browserify = require('browserify');
-const buffer = require('vinyl-buffer');
-const concat = require('gulp-concat');
 const concatCss = require('gulp-concat-css');
 const fs = require('fs');
 const jade = require('gulp-jade');
-const merge = require('merge-stream');
 const mkdirp = require('mkdirp');
-const source = require('vinyl-source-stream');
 const stylus = require('gulp-stylus');
 const templatizer = require('templatizer');
 const gitrev = require('git-rev');
 const webpack = require("webpack-stream");
 const gutil = require("gulp-util");
 const { exec } = require('child_process');
+const once = require('once')
 
 function getConfig() {
     const config = fs.readFileSync('./dev_config.json');
     return JSON.parse(config);
 }
 
-function lazy(func) {
-    let executed = false;
-    let result;  
-    return function() {
-        if (!executed) {
-            executed = true;
-            result = func.apply(this, arguments);
-        }
-        return result;
-    };
+const tasks = {}
+const task = (name, fn) => {
+    if (fn) {
+        tasks[name] = once(fn);
+        return;
+    }
+    return () => {
+        const t = tasks[name]()
+        t.displayName = name
+        return t
+    }
 }
 
-let startTask;
-let compileTask;
-let watchTask
-let resourcesTask;
-let clientTask;
-let configTask;
-let manifestTask;
-let jadeTemplatesTask;
-let jadeViewsTask;
-let cssTask;
-let stylusTask;
-let serverTask;
+const compileTask = task('compile')
+const startTask = task('start')
+const watchTask = task('watch')
+const resourcesTask = task('resources')
+const clientTask = task('client')
+const webpackTask = task('webpack')
+const configTask = task('config')
+const manifestTask = task('manifest')
+const jadeTemplatesTask = task('jadeTemplates')
+const jadeViewsTask = task('jadeViews')
+const jadeTask = task('jade')
+const cssTask = task('css')
+const concatCssTask = task('concatCss')
+const stylusTask = task('stylus')
+const serverTask = task('server')
 
-compileTask = lazy(() => parallel(resourcesTask(), clientTask(), configTask(), manifestTask()));
+task('compile', () => parallel(resourcesTask(), clientTask(), configTask(), manifestTask()));
 
-startTask = lazy(() => (cb) => {
+task('start', () => (cb) => {
     const cmd = 'node ./src/server.js';
-    exec(cmd, (err, stdout, stderr) => {
+    exec(cmd, (err, stdout) => {
         if (err) {
             console.error(`Error running Docker command: ${err}`);
             cb(err);
@@ -61,23 +61,26 @@ startTask = lazy(() => (cb) => {
     });
 })
 
-watchTask = lazy(() => () => {
+task('watch', () => (cb) => {
     watch([
         './src/**',
         '!./src/js/templates.js',
         './dev_config.json'
     ], batch(function (events, done) {
         console.log('==> Recompiling Kaiwa');
-        compile(done);
-    }));
+        compileTask()(done);
+    }, cb));
 });
 
-resourcesTask = lazy(() => () => {
+task('resources', () => (cb) => {
     return src('./src/resources/**')
-        .pipe(dest('./public'));
+        .pipe(dest('./public'))
+        .on('end', cb);
 });
 
-clientTask = lazy(() => parallel(jadeTemplatesTask(), jadeViewsTask(), (cb) => {
+task('client', () => parallel(jadeTemplatesTask(), jadeViewsTask(), webpackTask()));
+
+task('webpack', () => (cb) => {
     webpack(Object.assign({
             plugins: []
         }, require('./webpack.config.js')), null, function(err, stats) {
@@ -87,9 +90,9 @@ clientTask = lazy(() => parallel(jadeTemplatesTask(), jadeViewsTask(), (cb) => {
         })
         .pipe(dest('./public/js'))
         .on('end', cb);
-}));
+});
 
-configTask = lazy(() => (cb) => {
+task('config', () => (cb) => {
     const config = getConfig();
     gitrev.short(function (commit) {
         config.server.softwareVersion = {
@@ -110,7 +113,7 @@ configTask = lazy(() => (cb) => {
     })
 });
 
-manifestTask = lazy(() => (cb) => {
+task('manifest', () => (cb) => {
     const pkg = require('./package.json');
     const config = getConfig();
 
@@ -134,11 +137,13 @@ manifestTask = lazy(() => (cb) => {
     });
 });
 
-jadeTemplatesTask = lazy(() => (cb) => {
+task('jadeTemplates', () => (cb) => {
     templatizer('./src/jade/templates', './src/js/templates.js', cb);
 });
 
-jadeViewsTask = lazy(() => series(cssTask(), () => {
+task('jadeViews', () => series(cssTask(), jadeTask()));
+
+task('jade', () => (cb) => {
     const config = getConfig();
     return src([
         './src/jade/views/*',
@@ -149,28 +154,33 @@ jadeViewsTask = lazy(() => series(cssTask(), () => {
                 config: config
             }
         }))
-        .pipe(dest('./public/'));
-}));
+        .pipe(dest('./public/'))
+        .on('end', cb);
+});
 
-cssTask = lazy(() => series(stylusTask(), () => {
+task('css', () => series(stylusTask(), concatCssTask()));
+
+task('concatCss', () => (cb) => {
     return src([
             './build/css/*.css',
             './src/css/*.css'
         ])
         .pipe(concatCss('app.css'))
-        .pipe(dest('./public/css/'));
-}));
-
-stylusTask = lazy(() => () => {
-    return src('./src/stylus/client.styl')
-        .pipe(stylus())
-        .pipe(dest('./build/css'));
+        .pipe(dest('./public/css/'))
+        .on('end', cb);
 });
 
-serverTask = lazy(() => (cb) => {
+task('stylus', () => (cb) => {
+    return src('./src/stylus/client.styl')
+        .pipe(stylus())
+        .pipe(dest('./build/css'))
+        .on('end', cb);
+});
+
+task('server', () => (cb) => {
     const config = getConfig();
     const cmd = config.server.cmd.join(' ');
-    exec(cmd, (err, stdout, stderr) => {
+    exec(cmd, (err, stdout) => {
         if (err) {
             console.error(`Error running Docker command: ${err}`);
             cb(err);
@@ -180,16 +190,19 @@ serverTask = lazy(() => (cb) => {
         }
     });
 });
-  
+
 exports.compile = compileTask();
 exports.start = startTask();
 exports.watch = watchTask();
 exports.resources = resourcesTask();
 exports.client = clientTask();
+exports.webpack = webpackTask();
 exports.config = configTask();
 exports.manifest = manifestTask();
 exports.jadeTemplates = jadeTemplatesTask();
 exports.jadeViews = jadeViewsTask();
+exports.jade = jadeTask();
 exports.css = cssTask();
+exports.concatCss = concatCssTask();
 exports.stylus = stylusTask();
 exports.server = serverTask();

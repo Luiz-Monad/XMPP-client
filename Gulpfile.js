@@ -30,9 +30,10 @@ const task = (name, fn) => {
     }
 }
 
-const compileTask = task('compile')
 const startTask = task('start')
 const watchTask = task('watch')
+const compileTask = task('compile')
+const watchRecompileTask = task('watchRecompile')
 const resourcesTask = task('resources')
 const clientTask = task('client')
 const webpackTask = task('webpack')
@@ -44,24 +45,17 @@ const jadeTask = task('jade')
 const cssTask = task('css')
 const concatCssTask = task('concatCss')
 const stylusTask = task('stylus')
+const nodeRunTask = task('nodeRun')
+const nodeWatchTask = task('nodeWatch')
 const serverTask = task('server')
+
+task('start', () => parallel(serverTask(), series(compileTask(), nodeRunTask())))
+
+task('watch', () => series(compileTask(), parallel(watchRecompileTask(), nodeWatchTask())))
 
 task('compile', () => parallel(resourcesTask(), clientTask(), configTask(), manifestTask()));
 
-task('start', () => (cb) => {
-    const cmd = 'node ./src/server.js';
-    exec(cmd, (err, stdout) => {
-        if (err) {
-            console.error(`Error running Docker command: ${err}`);
-            cb(err);
-        } else {
-            console.log(`Docker command output: ${stdout}`);
-            cb();
-        }
-    });
-})
-
-task('watch', () => (cb) => {
+task('watchRecompile', () => (cb) => {
     watch([
         './src/**',
         '!./src/js/templates.js',
@@ -177,6 +171,32 @@ task('stylus', () => (cb) => {
         .on('end', cb);
 });
 
+task('nodeRun', () => (cb) => {
+    const cmd = 'node ./src/server.js';
+    exec(cmd, (err, stdout) => {
+        if (err) {
+            console.error(`Error running Docker command: ${err}`);
+            cb(err);
+        } else {
+            console.log(`Docker command output: ${stdout}`);
+            cb();
+        }
+    });
+})
+
+task('nodeWatch', () => (cb) => {
+    const cmd = 'node --watch ./src/server.js';
+    exec(cmd, (err, stdout) => {
+        if (err) {
+            console.error(`Error running Docker command: ${err}`);
+            cb(err);
+        } else {
+            console.log(`Docker command output: ${stdout}`);
+            cb();
+        }
+    });
+})
+
 task('server', () => (cb) => {
     const config = getConfig();
     const cmd = config.server.cmd.join(' ');
@@ -194,6 +214,7 @@ task('server', () => (cb) => {
 exports.compile = compileTask();
 exports.start = startTask();
 exports.watch = watchTask();
+exports.watchRecompile = watchRecompileTask()
 exports.resources = resourcesTask();
 exports.client = clientTask();
 exports.webpack = webpackTask();
@@ -205,4 +226,6 @@ exports.jade = jadeTask();
 exports.css = cssTask();
 exports.concatCss = concatCssTask();
 exports.stylus = stylusTask();
+exports.nodeRun = nodeRunTask();
+exports.nodeWatch = nodeWatchTask();
 exports.server = serverTask();

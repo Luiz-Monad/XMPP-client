@@ -1,27 +1,36 @@
 {
-    "isDev": true,
-    "http": {
-        "baseUrl": "http://localhost:8000",
-        "port": 8000,
-        "key": "./fakekeys/privatekey.pem",
-        "cert": "./fakekeys/certificate.pem"
-    },
-    "session": {
-        "secret": "shhhhhh don't tell anyone ok?"
-    },
-    "server": {
-        "name": "Kaiwa",
-        "domain": "example.com",
-        "wss": "wss://example.com:5281/xmpp-websocket/",
-        "sasl": "scram-sha-1",
-        "securePasswordStorage": true,
-        "muc": "chat.example.com",
-        "startup": "groupchat/room%40chat.example.com",
-        "admin": "admin",
-        "gravatar": false,
-        "keepalive": {
-            "interval": 45,
-            "timeout": 15
-        }
-    }
+  "isDev": true,
+  "http": {
+      "baseUrl": "http://localhost:8000",
+      "port": 8000,
+      "key": "./fakekeys/privatekey.pem",
+      "cert": "./fakekeys/certificate.pem"
+  },
+  "session": {
+      "secret": "shhhhhh don't tell anyone ok?"
+  },
+  "server": {
+      "name": "Kaiwa",
+      "domain": "example.com",
+      "wss": "wss://localhost:5280/xmpp-websocket/",
+      "sasl": "scram-sha-1",
+      "securePasswordStorage": true,
+      "muc": "chat.example.com",
+      "startup": "http://localhost:8000",
+      "admin": "admin",
+      "gravatar": false,
+      "keepalive": {
+          "interval": 45,
+          "timeout": 15
+      },
+      "cmd": [
+        "docker", "run",
+        "--name", "ejabberd",
+        "-d",
+        "-p", "5222:5222",
+        "-p", "5280:5280",
+        "-v", "./ejabberd.yml:/home/ejabberd/conf/ejabberd.yml",
+        "ejabberd/ecs"
+      ]
+  }
 }

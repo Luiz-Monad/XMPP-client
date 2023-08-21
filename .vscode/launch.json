@@ -1,68 +1,67 @@
 {
-	"version": "0.1.0",
-	// List of configurations. Add new configurations or edit existing ones.
-	// ONLY "node" and "mono" are supported, change "type" to switch.
-	"configurations": [
-		{
-			// Name of configuration; appears in the launch configuration drop down menu.
-			"name": "Launch src/server.js",
-			// Type of configuration. Possible values: "node", "mono".
-			"type": "node",
-			// Workspace relative or absolute path to the program.
-			"program": "src/server.js",
-			// Automatically stop program after launch.
-			"stopOnEntry": false,
-			// Command line arguments passed to the program.
-			"args": [],
-			// Workspace relative or absolute path to the working directory of the program being debugged. Default is the current workspace.
-			"cwd": ".",
-			// Workspace relative or absolute path to the runtime executable to be used. Default is the runtime executable on the PATH.
-			"runtimeExecutable": null,
-			// Optional arguments passed to the runtime executable.
-			"runtimeArgs": ["--nolazy"],
-			// Environment variables passed to the program.
-			"env": {
-				"NODE_ENV": "development"
-			},
-			// Use JavaScript source maps (if they exist).
-			"sourceMaps": false,
-			// If JavaScript source maps are enabled, the generated code is expected in this directory.
-			"outDir": null
-		},
-		{
-			// Name of configuration; appears in the launch configuration drop down menu.
-			"name": "Launch build",
-			// Type of configuration. Possible values: "node", "mono".
-			"type": "node",
-			// Workspace relative or absolute path to the program.
-			"program": "./node_modules/gulp/bin/gulp.js",
-			// Automatically stop program after launch.
-			"stopOnEntry": false,
-			// Command line arguments passed to the program.
-			"args": ["client"],
-			// Workspace relative or absolute path to the working directory of the program being debugged. Default is the current workspace.
-			"cwd": ".",
-			// Workspace relative or absolute path to the runtime executable to be used. Default is the runtime executable on the PATH.
-			"runtimeExecutable": "",
-			// Optional arguments passed to the runtime executable.
-			"runtimeArgs": ["--nolazy"],
-			// Environment variables passed to the program.
-			"env": {
-				"NODE_ENV": "development"
-			},
-			// Use JavaScript source maps (if they exist).
-			"sourceMaps": false,
-			// If JavaScript source maps are enabled, the generated code is expected in this directory.
-			"outDir": null
-		},
-		{
-			"name": "Attach",
-			"type": "node",
-			// TCP/IP address. Default is "localhost".
-			"address": "localhost",
-			// Port to attach to.
-			"port": 5858,
-			"sourceMaps": false
-		}
-	]
+  "version": "0.1.0",
+  "configurations": [
+    {
+      "name": "Launch src/server.js",
+      "type": "node",
+      "program": "src/server.js",
+      "stopOnEntry": false,
+      "args": [],
+      "cwd": ".",
+      "runtimeExecutable": null,
+      "runtimeArgs": [
+        "--nolazy"
+      ],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "sourceMaps": false,
+      "request": "launch",
+    },
+    {
+      "name": "gulp start",
+      "type": "node",
+      "program": "./node_modules/gulp/bin/gulp.js",
+      "stopOnEntry": false,
+      "args": [
+        "start"
+      ],
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "",
+      "runtimeArgs": [
+        "--nolazy"
+      ],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "sourceMaps": false,
+      "request": "launch",
+    },
+    {
+      "name": "gulp client",
+      "type": "node",
+      "program": "./node_modules/gulp/bin/gulp.js",
+      "stopOnEntry": false,
+      "args": [
+        "client"
+      ],
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "",
+      "runtimeArgs": [
+        "--inspect-brk",
+        "--nolazy"
+      ],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "sourceMaps": false,
+      "request": "launch",
+    },
+    {
+      "name": "Attach",
+      "type": "node",
+      "sourceMaps": false,
+      "request": "launch",
+    }
+  ]
 }

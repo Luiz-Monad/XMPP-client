@@ -11,7 +11,7 @@ var Contact = require('../models/contact');
 var Resource = require('../models/resource');
 var Message = require('../models/message');
 var Call = require('../models/call');
-var StanzaIo = require('stanza.io');
+var StanzaIo = require('stanza');
 
 var log = bows('Otalk');
 var ioLogIn = bows('<< in');

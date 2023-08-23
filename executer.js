@@ -16,4 +16,5 @@ exports.executer = function executer (cmdargs, cb) {
             cb();
         }
     });
+    return child;
 }

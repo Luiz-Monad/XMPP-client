@@ -34,8 +34,8 @@ const compileTask = task('compile');
 const watchRecompileTask = task('watchRecompile');
 const resourcesTask = task('resources');
 const clientTask = task('client');
-const webpackWatchTask = task('webpack');
-const webpackTask = task('webpackCompile');
+const webpackTask = task('webpack');
+const webpackWatchTask = task('webpackWatch');
 const configTask = task('config');
 const manifestTask = task('manifest');
 const jadeTemplatesTask = task('jadeTemplates');
@@ -50,7 +50,7 @@ const serverTask = task('server');
 
 startTask(() => parallel(serverTask(), series(compileTask(), nodeRunTask())))
 
-watchTask(() => series(parallel(watchRecompileTask(), webpackWatchTask(), nodeWatchTask())))
+watchTask(() => series(parallel(watchRecompileTask(), nodeWatchTask())))
 
 compileTask(() => parallel(resourcesTask(), clientTask(), configTask(), manifestTask()));
 
@@ -61,7 +61,6 @@ watchRecompileTask(() => (cb) => {
     };
     watch([
         './src/**',
-        '!./src/js/**', //webpack
         '!./src/css/client.css',
         '!./src/js/templates.js',
         './package.json',
@@ -72,7 +71,7 @@ watchRecompileTask(() => (cb) => {
         const cmd = ['yarn', 'run', 'gulp', 'compile'];
         executer(cmd, () => {
             console.log('==> Done!');
-            done()   
+            done()
         });
     })));
 });
@@ -85,24 +84,14 @@ resourcesTask(() => (cb) => {
 
 clientTask(() => parallel(jadeTemplatesTask(), jadeViewsTask(), webpackTask()));
 
-webpackWatchTask(() => (cb) => {
-    const cmd = [
-        'yarn', 'run', 
-        'webpack-cli', 'watch', 
-        '--progress', 
-        '--mode', 'development'
-    ];
-    executer(cmd, cb)
-})
-
 webpackTask(() => (cb) => {
     webpack(Object.assign({
-            plugins: []
-        }, require('./webpack.config.js')), null, (err, stats) => {
-            if(err) return cb(JSON.stringify(err));
-            gutil.log("[webpack]", stats.toString());
-            return stats;
-        })
+        plugins: []
+    }, require('./webpack.config.js')), null, (err, stats) => {
+        if (err) return cb(JSON.stringify(err));
+        gutil.log("[webpack]", stats.toString());
+        return stats;
+    })
         .pipe(dest('./public/js'))
         .on('end', cb);
 });
@@ -146,7 +135,7 @@ manifestTask(() => (cb) => {
 
             const manifest = content.replace(
                 '#{version}',
-                 pkg.version + config.isDev ? ' ' + Date.now() : '');
+                pkg.version + config.isDev ? ' ' + Date.now() : '');
             fs.writeFile('./public/manifest.cache', manifest, cb);
         });
     });
@@ -161,9 +150,9 @@ jadeViewsTask(() => series(cssTask(), jadeTask()));
 jadeTask(() => (cb) => {
     const config = getConfig();
     src([
-            './src/jade/views/*',
-            '!./src/jade/views/layout.jade'
-        ])
+        './src/jade/views/*',
+        '!./src/jade/views/layout.jade'
+    ])
         .pipe(jade({
             locals: {
                 config: config
@@ -177,8 +166,8 @@ cssTask(() => series(stylusTask(), concatCssTask()));
 
 concatCssTask(() => (cb) => {
     src([
-            './src/css/*.css'
-        ])
+        './src/css/*.css'
+    ])
         .pipe(concatCss('app.css'))
         .pipe(dest('./public/css/'))
         .on('end', cb);
@@ -192,12 +181,12 @@ stylusTask(() => (cb) => {
 });
 
 nodeRunTask(() => (cb) => {
-    const cmd = ['node', '--watch', './src/server.js'];
+    const cmd = ['node', './src/server.js'];
     executer(cmd, cb)
 })
 
 nodeWatchTask(() => (cb) => {
-    const cmd = ['node', '--watch', './src/server.js'];
+    const cmd = ['node', '--watch-preserve-output', './src/server.js'];
     executer(cmd, cb)
 })
 
@@ -206,14 +195,48 @@ serverTask(() => (cb) => {
     executer(config.server.cmd, cb)
 });
 
+webpackWatchTask(() => (cb) => {
+    let webpack;
+    const keepRunning = (fn) => (done) => {
+        fn();
+        done();
+    };
+    const start = () => {
+        const cmd = [
+            'yarn', 'run',
+            'webpack-cli', 'watch',
+            '--progress',
+            '--mode', 'development'
+        ];
+        webpack = executer(cmd, () => {
+            console.log('==> start watch done!');
+        });
+    };
+    const stop = () => {
+        if (webpack) {
+            webpack.kill();
+            webpack = null;
+        }
+    };
+    watch([
+        './webpack.config.js',
+    ], keepRunning(batch({}, (events, done) => {
+        console.log('==> Rewatching Kaiwa');
+        stop();
+        start();
+        done();
+    })));
+    start();
+})
+
 exports.compile = compileTask();
 exports.start = startTask();
 exports.watch = watchTask();
 exports.watchRecompile = watchRecompileTask()
 exports.resources = resourcesTask();
 exports.client = clientTask();
-exports.webpackWatch = webpackWatchTask();
 exports.webpack = webpackTask();
+exports.webpackWatch = webpackWatchTask();
 exports.config = configTask();
 exports.manifest = manifestTask();
 exports.jadeTemplates = jadeTemplatesTask();

@@ -2,7 +2,7 @@
 "use strict";
 
 var _ = require('underscore');
-var StanzaIo = require('stanza.io');
+var StanzaIo = require('stanza');
 var StayDown = require('staydown');
 var BasePage = require('./base');
 var templates = require('../templates');

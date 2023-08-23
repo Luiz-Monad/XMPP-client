@@ -2,6 +2,7 @@
 
 /build/
 /src/js/templates.js
+/src/css/client.css
 /public/
 /dev_config.json
 

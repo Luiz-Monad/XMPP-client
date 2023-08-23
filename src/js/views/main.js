@@ -2,7 +2,7 @@
 "use strict";
 
 var HumanView = require('human-view');
-var StanzaIo = require('stanza.io');
+var StanzaIo = require('stanza');
 var templates = require('../templates');
 var ContactListItem = require('../views/contactListItem');
 var MUCListItem = require('../views/mucListItem');

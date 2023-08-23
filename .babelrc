@@ -1,9 +1,6 @@
 {
-	"presets": ["es2015", "stage-0", "stage-1"],
+	"presets": ["@babel/env"],
 	"plugins": [
-		"transform-decorators", 
-		"syntax-decorators",
-		"transform-runtime",
-		"transform-es2015-block-scoping"
+		"@babel/plugin-transform-runtime"
 	]
 }

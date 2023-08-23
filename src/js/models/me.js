@@ -11,7 +11,7 @@ var MUC = require('./muc');
 var ContactRequests = require('./contactRequests');
 var fetchAvatar = require('../helpers/fetchAvatar');
 var crypto = require('crypto');
-var StanzaIo = require('stanza.io');
+var StanzaIo = require('stanza');
 
 module.exports = HumanModel.define({
     initialize: function (opts) {

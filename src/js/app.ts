@@ -1,33 +1,22 @@
-/// <reference path="../../typings/tsd.d.ts" />
 'use strict';
-
-global.Buffer = global.Buffer || require('buffer').Buffer;
 
 declare const SERVER_CONFIG: any
 declare const client: any
 declare const me: any
 
-interface Storage {}
-interface StorageConstructor {
-    new(): Storage
-    prototype: Storage
-}
-
-var $: JQueryStatic = require('jquery')
-var _: _.LoDashStatic = require('lodash')
-var Backbone = require('backbone')
+const Backbone = require('backbone')
 
 Backbone.$ = $
-const asyncjs: Async = require('async')
-var StanzaIO = require('stanza.io')
+const asyncjs = require('async')
+const StanzaIO = require('stanza')
 
-var AppState = require('./models/state')
-var MeModel = require('./models/me')
+const AppState = require('./models/state')
+const MeModel = require('./models/me')
 const MainView = require('./views/main')
-var Router = require('./router')
-var Storage: StorageConstructor = require('./storage')
-var xmppEventHandlers = require('./helpers/xmppEventHandlers')
-var pushNotifications = require('./helpers/pushNotifications')
+const Router = require('./router')
+const AppStorage = require('./storage')
+const xmppEventHandlers = require('./helpers/xmppEventHandlers')
+const pushNotifications = require('./helpers/pushNotifications')
 const Notify = require('notify.js')
 const url = require('url')
 
@@ -76,7 +65,7 @@ class App {
             function (cb) {
                 app.notifications = new Notify()
                 app.soundManager = new SoundEffectManager()
-                app.storage = new Storage()
+                app.storage = new AppStorage()
                 app.storage.open(cb)
                 app.composing = {}
                 app.timeInterval = 0

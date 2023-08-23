@@ -1,25 +1,30 @@
-var path = require('path')
+const webpack = require('webpack');
+const path = require('path');
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 module.exports = {
-    debug: true,
     devtool: 'cheap-source-map',
+
     resolve: {
-        extensions: ['', '.ts', '.js', '.json', '.jade', '.html', '.less', '.css', '.json']
+        fallback: {
+            path: require.resolve('path-browserify'),
+            crypto: require.resolve('crypto-browserify'),
+            os: require.resolve('os-browserify'),
+            stream: require.resolve('stream-browserify'),
+            fs: false,
+            'mock-aws-s3': false,
+            'aws-sdk': false,
+            nock: false,
+            util: false,
+            assert: false,
+            child_process: false,
+        }
     },
-    
-    context: path.join(__dirname, 'src', 'js'),
+
+    context: path.join(__dirname, './src/js'),
 
     entry: {
-        "0-babel-polyfill": 'babel-polyfill',
-        "1-vendor": 
-        [
-            require.resolve('jquery'),
-            './libraries/resampler.js',
-            require.resolve('indexeddbshim'),
-            require.resolve('sugar-date'),
-            './libraries/jquery.oembed.js'
-        ],
-        "app": "./app.ts"
+        'app': './app.ts'
     },
 
     output: {
@@ -27,54 +32,86 @@ module.exports = {
         filename: '[name].js',
         chunkFilename: '[name].js'
     },
-    
+
     stats: {
         colors: true,
-        reasons: true
+        reasons: true,
+    },
+
+    plugins: [
+        new webpack.ProvidePlugin({
+            _: 'lodash',
+            $: 'jquery',
+            jQuery: 'jquery',
+            Buffer: ['buffer', 'Buffer'],
+            Resample: path.join(__dirname, './src/js/libraries/resampler.js'),
+            jQueryOem: path.join(__dirname, './src/js/libraries/jquery.oembed.js'),
+        }),
+        new webpack.LoaderOptionsPlugin({
+            debug: true
+        }),
+        new NodePolyfillPlugin(),
+    ],
+
+    optimization: {
+        minimize: false,
+        nodeEnv: 'development',
+        splitChunks: {
+            chunks: 'all',
+            name(module, chunks, cacheGroupKey) {
+                const allChunksNames = chunks.map((item) => item.name).join('~');
+                return `${cacheGroupKey}-${allChunksNames}`;
+            },
+            cacheGroups: {
+                '0-polyfill': {
+                    test: /[\\/]node_modules[\\/]/,
+                    priority: -10,
+                    reuseExistingChunk: true,
+                },
+                '1-vendor': {
+                    test: /[\\/]src[\\/]js[\\/]libraries[\\/]/,
+                    priority: -20,
+                    enforce: true
+                },
+                '2-default': {
+                    test: /[\\/]src[\\/]/,
+                    priority: -30,
+                    enforce: true
+                },
+            },
+        },
     },
 
     module: {
-        loaders: [
-            { 
-                test: require.resolve('jquery'),
-                loader: "expose?$!expose?jQuery"
-            },
-            {
-              test: /resampler\.js$/,
-              loader: 'expose?Resample!imports?this=>window!exports?Resample'  
-            },
-            {
-              test: /jquery\.oembed\.js$/,
-              loader: 'imports?jQuery=jquery'  
-            },
+        rules: [
             {
                 test: /\.ts(x?)$/,
-                exclude: /(node_modules|bower_components|libraries)/,
-                loader: 'babel!ts-loader'
+                exclude: /(node_modules)/,
+                use: [
+                    'babel-loader',
+                    'ts-loader',
+                ],
             },
             {
                 test: /\.js(x?)$/,
-                exclude: /(node_modules|bower_components|libraries)/,
-                loader: 'babel'
+                exclude: /(node_modules)/,
+                loader: 'babel-loader'
             },
             {
                 test: /\.jade$/,
-                loader: 'jade-loader'
+                exclude: /(node_modules)/,
+                loader: 'pug-loader'
             },
             {
                 test: /\.json$/,
+                exclude: /(node_modules)/,
                 loader: 'json-loader'
             }
         ]
     },
+
     node: {
-        Buffer: true,
-        console: true,
         global: true,
-        fs: "empty"
     },
-    externals: {
-        jquery: 'jQuery'
-    }
-    
+
 };

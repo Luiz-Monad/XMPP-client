@@ -38,9 +38,9 @@
       ],
     },
     {
-      "label": "webpack",
+      "label": "webpack-watch",
       "type": "shell",
-      "command": "yarn webpack",
+      "command": "yarn webpack-watch",
       "isBackground": true,
       "problemMatcher": [
         "$ts-webpack-watch",

@@ -1,6 +1,5 @@
-/*global $, app*/
 
-module.exports = function ($html, cb) {
+export default function ($html, cb) {
     cb = cb || function () {};
 
     $($html).find("a.source").oembed(null, {

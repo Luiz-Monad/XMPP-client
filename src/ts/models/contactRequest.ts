@@ -1,12 +1,13 @@
-/*global app, me*/
-"use strict";
 
-var HumanModel = require('human-model');
+import HumanModel from 'human-model';
 
 
-module.exports = HumanModel.define({
+const ContactRequest = HumanModel.define({
     type: 'contactRequest',
     props: {
         jid: ['string', true, '']
     }
 });
+
+export default ContactRequest;
+export type ContactRequestType = typeof ContactRequest;

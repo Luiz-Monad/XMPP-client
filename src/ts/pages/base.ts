@@ -1,11 +1,9 @@
-/*global $, app, me*/
-"use strict";
 
-var _ = require('underscore');
-var HumanView = require('human-view');
+import _ from 'underscore';
+import HumanView from 'human-view';
 
 
-module.exports = HumanView.extend({
+const BasePage = HumanView.extend({
     show: function (animation) {
         var self = this;
 
@@ -51,3 +49,5 @@ module.exports = HumanView.extend({
         return this;
     }
 });
+
+export default BasePage;

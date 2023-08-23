@@ -1,17 +1,15 @@
-/*global app, me, client*/
-"use strict";
 
-var _ = require('underscore');
-var async = require('async');
-var uuid = require('node-uuid');
-var htmlify = require('../helpers/htmlify');
-var HumanModel = require('human-model');
-var Resources = require('./resources');
-var Messages = require('./messages');
-var Message = require('./message');
-var fetchAvatar = require('../helpers/fetchAvatar');
+import _ from 'underscore';
+import async from 'async';
+import uuid from 'node-uuid';
+import htmlify from '../helpers/htmlify';
+import HumanModel from 'human-model';
+import Resources from './resources';
+import Messages from './messages';
+import Message from './message';
+import fetchAvatar from '../helpers/fetchAvatar';
 
-module.exports = HumanModel.define({
+const MUC = HumanModel.define({
     initialize: function (attrs) {
         if (attrs.jid) {
             this.id = attrs.jid.full;
@@ -284,3 +282,6 @@ module.exports = HumanModel.define({
         client.leaveRoom(this.jid, this.nick);
     }
 });
+
+export default MUC;
+export type MUCType = typeof MUC;

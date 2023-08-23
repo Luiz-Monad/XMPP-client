@@ -1,15 +1,14 @@
 /*global app, me*/
-"use strict";
 
-var _ = require('underscore');
-var uuid = require('node-uuid');
-var HumanModel = require('human-model');
-var templates = require('../templates');
-var htmlify = require('../helpers/htmlify');
+import _ from 'underscore';
+import uuid from 'node-uuid';
+import HumanModel from 'human-model';
+import templates from 'templates';
+import htmlify from '../helpers/htmlify';
 
-var ID_CACHE = {};
+const ID_CACHE = {};
 
-var Message = module.exports = HumanModel.define({
+const Message = HumanModel.define({
     initialize: function (attrs) {
         this._created = new Date(Date.now() + app.timeInterval);
     },
@@ -257,3 +256,6 @@ Message.idStore = function (jid, mid, msg) {
     var cache = ID_CACHE[jid] || (ID_CACHE[jid] = {});
     cache[mid] = msg;
 };
+
+export default Message;
+export type MessageType = typeof Message;

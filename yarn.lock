@@ -1066,6 +1066,14 @@
   resolved "https://registry.yarnpkg.com/@types/async/-/async-3.2.20.tgz#53517caaa68c94f99da1c4e986cf7f2954981515"
   integrity sha512-6jSBQQugzyX1aWto0CbvOnmxrU9tMoXfA9gc4IrLEtvr3dTwSg5GLGoWiZnGLI6UG/kqpB3JOQKQrqnhUWGKQA==
 
+"@types/backbone@^1.4.15":
+  version "1.4.15"
+  resolved "https://registry.yarnpkg.com/@types/backbone/-/backbone-1.4.15.tgz#505323ab8fea11ecaec74cb3f73d569a4e5eb779"
+  integrity sha512-WWeKtYlsIMtDyLbbhkb96taJMEbfQBnuz7yw1u0pkphCOtksemoWhIXhK74VRCY9hbjnsH3rsJu2uUiFtnsEYg==
+  dependencies:
+    "@types/jquery" "*"
+    "@types/underscore" "*"
+
 "@types/eslint-scope@^3.7.3":
   version "3.7.4"
   resolved "https://registry.yarnpkg.com/@types/eslint-scope/-/eslint-scope-3.7.4.tgz#37fc1223f0786c39627068a12e94d6e6fc61de16"
@@ -1087,7 +1095,7 @@
   resolved "https://registry.yarnpkg.com/@types/estree/-/estree-1.0.1.tgz#aa22750962f3bf0e79d753d3cc067f010c95f194"
   integrity sha512-LG4opVs2ANWZ1TJoKc937iMmNstM/d0ae1vNbnBvBhqCSezgVUOzcLCqbI5elV8Vy6WKwKjaqR+zO9VKirBBCA==
 
-"@types/jquery@^3.5.17":
+"@types/jquery@*", "@types/jquery@^3.5.17":
   version "3.5.17"
   resolved "https://registry.yarnpkg.com/@types/jquery/-/jquery-3.5.17.tgz#c38d964441f678cd358afb92f5688ecfcb6aaa2b"
   integrity sha512-U40tNEAGSTZ7R1OC6kGkD7f4TKW5DoVx6jd9kTB9mo5truFMi1m9Yohnw9kl1WpTPvDdj7zAw38LfCHSqnk5kA==
@@ -1103,6 +1111,13 @@
   version "4.14.197"
   resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.14.197.tgz#e95c5ddcc814ec3e84c891910a01e0c8a378c54b"
   integrity sha512-BMVOiWs0uNxHVlHBgzTIqJYmj+PgCo4euloGF+5m4okL3rEYzM2EEv78mw8zWSMM57dM7kVIgJ2QDvwHSoCI5g==
+
+"@types/node-uuid@^0.0.29":
+  version "0.0.29"
+  resolved "https://registry.yarnpkg.com/@types/node-uuid/-/node-uuid-0.0.29.tgz#c5f56118c683874f13d574a2c26a54d377a70625"
+  integrity sha512-aZX0KOYiYcIeKtZnpuqrU6V8gT25HRGzugYNHBPQb4Lp55QqlsMRKsKM+GTKey2+2zp6dsm3fVDnQVyDOKwGdA==
+  dependencies:
+    "@types/node" "*"
 
 "@types/node@*", "@types/node@^20.5.3":
   version "20.5.3"
@@ -1123,6 +1138,11 @@
   version "2.3.3"
   resolved "https://registry.yarnpkg.com/@types/sizzle/-/sizzle-2.3.3.tgz#ff5e2f1902969d305225a047c8a0fd5c915cebef"
   integrity sha512-JYM8x9EGF163bEyhdJBpR2QX1R5naCJHC8ucJylJ3w9/CVBaskdQ8WqBf8MmQrd1kRvp/a4TS8HJ+bxzR7ZJYQ==
+
+"@types/underscore@*", "@types/underscore@^1.11.7":
+  version "1.11.7"
+  resolved "https://registry.yarnpkg.com/@types/underscore/-/underscore-1.11.7.tgz#fa644dd948a34b4e102e6d31c30823ecba6ba9c7"
+  integrity sha512-uXFrH3+/R8AkckdYPJdmJm537rAOWOUt4DW3ni2l2GdXe1YrdREqab6lqsq1hm76xEihV39/qTxKIevNpZw2Zg==
 
 "@types/ws@^7.4.0":
   version "7.4.7"

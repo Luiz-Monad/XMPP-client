@@ -1,10 +1,9 @@
-"use strict";
 
-var BaseCollection = require('./baseCollection');
-var ContactRequest = require('./contactRequest');
+import BaseCollection from './baseCollection';
+import ContactRequest, { ContactRequestType } from './contactRequest';
 
 
-module.exports = BaseCollection.extend({
-    type: 'contactRequests',
-    model: ContactRequest
-});
+export default class ContactRequests extends BaseCollection<ContactRequestType> {
+    type = 'contactRequests';
+    model = ContactRequest;
+};

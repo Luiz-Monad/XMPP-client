@@ -1,9 +1,8 @@
-/*global app, $, me*/
-"use strict";
 
-var HumanModel = require('human-model');
+import { any } from 'async';
+import HumanModel from 'human-model';
 
-module.exports = HumanModel.define({
+const State = HumanModel.define({
     initialize: function () {
         var self = this;
         $(window).blur(function () {
@@ -18,6 +17,7 @@ module.exports = HumanModel.define({
         });
 
         document.addEventListener('deviceid', function (event) {
+            //@ts-ignore
             self.deviceID = event.deviceid;
         });
 
@@ -77,3 +77,6 @@ module.exports = HumanModel.define({
         this.idleSince = new Date(Date.now());
     }
 });
+
+export default State;
+export type StateType = typeof State;

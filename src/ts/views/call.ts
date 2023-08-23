@@ -1,12 +1,11 @@
-/*global $, app*/
-"use strict";
 
-var _ = require('underscore');
-var HumanView = require('human-view');
-var templates = require('../templates');
+import _ from 'underscore';
+import HumanView from 'human-view';
+import templates from 'templates';
+import { ContactType } from '../models/contact';
 
 
-module.exports = HumanView.extend({
+export default HumanView.extend({
     template: templates.includes.call,
     classBindings: {
         state: ''
@@ -34,7 +33,7 @@ module.exports = HumanView.extend({
 
         return this;
     },
-    handleAnswerClick: function (e) {
+    handleAnswerClick: function (e: Event) {
         e.preventDefault();
         var self = this;
         self.model.state = 'active';
@@ -43,28 +42,28 @@ module.exports = HumanView.extend({
         self.model.jingleSession.accept();
         return false;
     },
-    handleIgnoreClick: function (e) {
+    handleIgnoreClick: function (e: Event) {
         e.preventDefault();
         this.model.jingleSession.end({
             condition: 'decline'
         });
         return false;
     },
-    handleCancelClick: function (e) {
+    handleCancelClick: function (e: Event) {
         e.preventDefault();
         this.model.jingleSession.end({
             condition: 'cancel'
         });
         return false;
     },
-    handleEndClick: function (e) {
+    handleEndClick: function (e: Event) {
         e.preventDefault();
         this.model.jingleSession.end({
             condition: 'success'
         });
         return false;
     },
-    handleMuteClick: function (e) {
+    handleMuteClick: function (e: Event) {
         return false;
     },
     // we want to make sure we show the appropriate buttons

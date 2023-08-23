@@ -1,6 +1,5 @@
-/*global app*/
-"use strict";
-var crypto = require('crypto');
+
+import crypto from 'crypto';
 
 function fallback(jid) {
     if(!SERVER_CONFIG.gravatar) {
@@ -16,7 +15,7 @@ function fallback(jid) {
     };
 };
 
-module.exports = function (jid, id, type, source, cb) {
+export default function (jid, id, type, source, cb) {
     if (!id) {
         return cb(fallback(jid));
     }

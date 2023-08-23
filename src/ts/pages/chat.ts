@@ -1,18 +1,16 @@
-/*global $, app, me, client*/
-"use strict";
 
-var _ = require('underscore');
-var StanzaIo = require('stanza');
-var StayDown = require('staydown');
-var BasePage = require('./base');
-var templates = require('../templates');
-var Message = require('../views/message');
-var MessageModel = require('../models/message');
-var embedIt = require('../helpers/embedIt');
-var htmlify = require('../helpers/htmlify');
-var attachMediaStream = require('attachmediastream');
+import _ from 'underscore';
+import StanzaIo from 'stanza';
+import StayDown from 'staydown';
+import BasePage from './base';
+import templates from 'templates';
+import Message from '../views/message';
+import MessageModel from '../models/message';
+import embedIt from '../helpers/embedIt';
+import htmlify from '../helpers/htmlify';
+import attachMediaStream from 'attachmediastream';
 
-module.exports = BasePage.extend({
+const ChatPage = BasePage.extend({
     template: templates.pages.chat,
     initialize: function (spec) {
         this.editMode = false;
@@ -100,11 +98,11 @@ module.exports = BasePage.extend({
 
         return this;
     },
-    handlePageLoaded: function () {
+    handlePageLoaded: function (e: Event) {
         this.staydown.checkdown();
         this.resizeInput();
     },
-    handleCallClick: function (e) {
+    handleCallClick: function (e: Event) {
         e.preventDefault();
         this.model.call();
         return false;
@@ -123,7 +121,7 @@ module.exports = BasePage.extend({
         });
         this.staydown.checkdown();
     },
-    handleKeyDown: function (e) {
+    handleKeyDown: function (e: KeyboardEvent) {
         if (e.which === 13 && !e.shiftKey) {
             app.composing[this.model.jid] = '';
             this.sendChat();
@@ -150,7 +148,7 @@ module.exports = BasePage.extend({
             }
         }
     },
-    handleKeyUp: function (e) {
+    handleKeyUp: function (e: KeyboardEvent) {
         this.resizeInput();
         app.composing[this.model.jid] = this.$chatInput.val();
         if (this.typing && this.$chatInput.val().length === 0) {
@@ -301,7 +299,7 @@ module.exports = BasePage.extend({
             this.firstChanged = true;
         }
     },
-    handleAcceptClick: function (e) {
+    handleAcceptClick: function (e: Event) {
         e.preventDefault();
         var self = this;
 
@@ -325,7 +323,7 @@ module.exports = BasePage.extend({
         }
         return false;
     },
-    handleEndClick: function (e) {
+    handleEndClick: function (e: Event) {
         e.preventDefault();
         var condition = 'success';
         if (this.model.jingleCall) {
@@ -338,7 +336,7 @@ module.exports = BasePage.extend({
         }
         return false;
     },
-    handleMuteClick: function (e) {
+    handleMuteClick: function (e: Event) {
         return false;
     },
     resizeInput: _.throttle(function () {
@@ -377,3 +375,5 @@ module.exports = BasePage.extend({
         }
     }
 });
+
+export default ChatPage;

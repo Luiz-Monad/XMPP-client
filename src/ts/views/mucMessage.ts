@@ -1,12 +1,10 @@
-/*global $*/
-"use strict";
 
-var _ = require('underscore');
-var HumanView = require('human-view');
-var templates = require('../templates');
+import _ from 'underscore';
+import HumanView from 'human-view';
+import templates from 'templates';
 
 
-module.exports = HumanView.extend({
+export default HumanView.extend({
     template: templates.includes.mucMessage,
     initialize: function (opts) {
         this.render();

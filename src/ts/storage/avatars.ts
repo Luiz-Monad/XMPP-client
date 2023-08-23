@@ -1,39 +1,34 @@
-"use strict";
 
 // SCHEMA
 //    id: 'sha1 hash',
 //    dataURI: '...'
 
-
-function AvatarStorage(storage) {
-    this.storage = storage;
-}
-
-AvatarStorage.prototype = {
-    constructor: {
-        value: AvatarStorage
-    },
-    setup: function (db) {
+class AvatarStorage {
+    private storage: any;
+    constructor(storage: any) {
+        this.storage = storage;
+    };
+    setup(db) {
         if (db.objectStoreNames.contains('avatars')) {
             db.deleteObjectStore('avatars');
         }
         db.createObjectStore('avatars', {
             keyPath: 'id'
         });
-    },
-    transaction: function (mode) {
+    };
+    transaction(mode) {
         var trans = this.storage.db.transaction('avatars', mode);
         return trans.objectStore('avatars');
-    },
-    add: function (avatar, cb) {
+    };
+    add(avatar, cb) {
         cb = cb || function () {};
         var request = this.transaction('readwrite').put(avatar);
         request.onsuccess = function () {
             cb(false, avatar);
         };
         request.onerror = cb;
-    },
-    get: function (id, cb) {
+    };
+    get(id, cb) {
         cb = cb || function () {};
         if (!id) {
             return cb('not-found');
@@ -47,16 +42,16 @@ AvatarStorage.prototype = {
             cb(false, request.result);
         };
         request.onerror = cb;
-    },
-    remove: function (id, cb) {
+    };
+    remove(id, cb) {
         cb = cb || function () {};
         var request = this.transaction('readwrite')['delete'](id);
         request.onsuccess = function (e) {
             cb(false, request.result);
         };
         request.onerror = cb;
-    }
+    };
 };
 
 
-module.exports = AvatarStorage;
+export default AvatarStorage;

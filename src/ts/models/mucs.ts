@@ -1,15 +1,13 @@
-/*global app, client*/
-"use strict";
 
-var async = require('async');
-var BaseCollection = require('./baseCollection');
-var MUC = require('./muc');
+import async from 'async';
+import BaseCollection from './baseCollection';
+import MUC, { MUCType } from './muc';
 
 
-module.exports = BaseCollection.extend({
-    type: 'mucs',
-    model: MUC,
-    comparator: function (model1, model2) {
+export default class MUCs extends BaseCollection<MUCType> {
+    type = 'mucs';
+    model = MUC;
+    comparator = (model1: MUCType, model2: MUCType) => {
         var name1 = model1.displayName.toLowerCase();
         var name2 = model2.displayName.toLowerCase();
         if (name1 === name2) {
@@ -19,11 +17,11 @@ module.exports = BaseCollection.extend({
             return -1;
         }
         return 1;
-    },
-    initialize: function (model, options) {
+    };
+    initialize(model, options) {
         this.bind('change', this.sort, this);
-    },
-    fetch: function () {
+    };
+    fetch() {
         var self = this;
         app.whenConnected(function () {
             client.getBookmarks(function (err, res) {
@@ -40,8 +38,8 @@ module.exports = BaseCollection.extend({
                 self.trigger('loaded');
             });
         });
-    },
-    save: function (cb) {
+    };
+    save(cb) {
         var self = this;
         app.whenConnected(function () {
             var models = [];
@@ -53,7 +51,7 @@ module.exports = BaseCollection.extend({
                     autoJoin: model.autoJoin
                 });
             });
-            client.setBookmarks({conferences: models}, cb);
+            client.setBookmarks({ conferences: models }, cb);
         });
-    }
-});
+    };
+};

@@ -1,12 +1,10 @@
-/*global $, app*/
-"use strict";
 
-var _ = require('underscore');
-var HumanView = require('human-view');
-var templates = require('../templates');
+import _ from 'underscore';
+import HumanView from 'human-view';
+import templates from 'templates';
 
 
-module.exports = HumanView.extend({
+export default HumanView.extend({
     template: templates.includes.contactRequest,
     initialize: function (opts) {
         this.render();
@@ -22,7 +20,7 @@ module.exports = HumanView.extend({
         this.renderAndBind({message: this.model});
         return this;
     },
-    handleApprove: function (e) {
+    handleApprove: function (e: Event) {
         e.preventDefault();
         app.api.sendPresence({
             to: this.model.jid,
@@ -35,7 +33,7 @@ module.exports = HumanView.extend({
         app.me.contactRequests.remove(this.model);
         return false;
     },
-    handleDeny: function (e) {
+    handleDeny: function (e: Event) {
         e.preventDefault();
         app.api.sendPresence({
             to: this.model.jid,

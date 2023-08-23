@@ -1,12 +1,10 @@
-/*global $, app, me*/
-"use strict";
 
-var _ = require('underscore');
-var HumanView = require('human-view');
-var templates = require('../templates');
+import _ from 'underscore';
+import HumanView from 'human-view';
+import templates from 'templates';
 
 
-module.exports = HumanView.extend({
+export default HumanView.extend({
     template: templates.includes.contactListItem,
     classBindings: {
         show: '',
@@ -32,12 +30,12 @@ module.exports = HumanView.extend({
         this.renderAndBind({contact: this.model});
         return this;
     },
-    handleClick: function () {
+    handleClick: function (e: Event) {
         if (me.contacts.get(this.model.jid)) {
             app.navigate('chat/' + encodeURIComponent(this.model.jid));
         }
     },
-    handleRemoveContact: function() {
+    handleRemoveContact: function(e: Event) {
         var question = "Remove "
             + (this.model.name ?
                 (this.model.name + " (" +  this.model.jid + ")")

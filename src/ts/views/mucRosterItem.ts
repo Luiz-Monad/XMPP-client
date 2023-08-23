@@ -1,12 +1,10 @@
-/*global $, app, me*/
-"use strict";
 
-var _ = require('underscore');
-var HumanView = require('human-view');
-var templates = require('../templates');
+import _ from 'underscore';
+import HumanView from 'human-view';
+import templates from 'templates';
 
 
-module.exports = HumanView.extend({
+export default HumanView.extend({
     template: templates.includes.mucRosterItem,
     events: {
         'click': 'handleClick'
@@ -23,7 +21,7 @@ module.exports = HumanView.extend({
         this.renderAndBind({contact: this.model});
         return this;
     },
-    handleClick: function (e) {
+    handleClick: function (e: Event) {
         this.parent.trigger('rosterItemClicked', this.model.mucDisplayName);
     }
 });

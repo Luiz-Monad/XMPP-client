@@ -1,23 +1,21 @@
-/*global me, app, client*/
-"use strict";
 
-var _ = require('underscore');
-var async = require('async');
-var crypto = require('crypto');
-var bows = require('bows');
-var uuid = require('node-uuid');
-var HumanModel = require('human-model');
-var Contact = require('../models/contact');
-var Resource = require('../models/resource');
-var Message = require('../models/message');
-var Call = require('../models/call');
-var StanzaIo = require('stanza');
+import _ from 'underscore';
+import async from 'async';
+import crypto from 'crypto';
+import bows from 'bows';
+import uuid from 'node-uuid';
+import HumanModel from 'human-model';
+import Contact from '../models/contact';
+import Resource from '../models/resource';
+import Message from '../models/message';
+import Call from '../models/call';
+import StanzaIo from 'stanza';
 
-var log = bows('Otalk');
-var ioLogIn = bows('<< in');
-var ioLogOut = bows('>> out');
+const log = bows('Otalk');
+const ioLogIn = bows('<< in');
+const ioLogOut = bows('>> out');
 
-var discoCapsQueue = async.queue(function (pres, cb) {
+const discoCapsQueue = async.queue(function (pres, cb) {
     var jid = pres.from;
     var caps = pres.caps;
 
@@ -57,7 +55,7 @@ var discoCapsQueue = async.queue(function (pres, cb) {
 });
 
 
-module.exports = function (client, app) {
+export default function (client, app) {
 
     client.on('*', function (name, data) {
         if (name === 'raw:incoming') {

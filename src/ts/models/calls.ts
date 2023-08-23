@@ -1,10 +1,9 @@
-"use strict";
 
-var BaseCollection = require('./baseCollection');
-var Call = require('./call');
+import BaseCollection from './baseCollection';
+import Call, { CallType } from './call';
 
 
-module.exports = BaseCollection.extend({
-    type: 'calls',
-    model: Call
-});
+export default class Calls extends BaseCollection<CallType> {
+    type = 'calls';
+    model = Call;
+};

@@ -1,13 +1,12 @@
-"use strict";
 
 // our base collection
-var Backbone = require('backbone');
+import Backbone, { Model } from 'backbone';
 
 
-module.exports = Backbone.Collection.extend({
+export default class BaseCollection<TModel extends Model = Model> extends Backbone.Collection<TModel> {
     // ###next
     // returns next item when given an item in the collection
-    next: function (item, filter, start) {
+    next(item: TModel, filter?: (_: TModel) => boolean, start?: TModel): TModel {
         var i = this.indexOf(item),
             newItem;
 
@@ -25,11 +24,11 @@ module.exports = Backbone.Collection.extend({
             }
         }
         return newItem;
-    },
+    };
 
     // ###prev
     // returns previous item when given an item in the collection
-    prev: function (item, filter, start) {
+    prev(item: TModel, filter?: (_: TModel) => boolean, start?: TModel): TModel {
         var i = this.indexOf(item),
             newItem;
         if (i === -1) {
@@ -46,5 +45,5 @@ module.exports = Backbone.Collection.extend({
             }
         }
         return this.at(i);
-    }
-});
+    };
+};

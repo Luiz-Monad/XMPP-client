@@ -1,13 +1,11 @@
-/*global app, me, client*/
-"use strict";
 
-var Backbone = require('backbone');
-var SettingsPage = require('./pages/settings');
-var ChatPage = require('./pages/chat');
-var GroupChatPage = require('./pages/groupchat');
+import Backbone from 'backbone';
+import SettingsPage from './pages/settings';
+import ChatPage from './pages/chat';
+import GroupChatPage from './pages/groupchat';
 
 
-module.exports = Backbone.Router.extend({
+export default Backbone.Router.extend({
     routes: {
         '': 'settings',
         'chat/:jid': 'chat',

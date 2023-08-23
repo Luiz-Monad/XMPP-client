@@ -1,14 +1,13 @@
 /*global app, me, client*/
-"use strict";
 
-var _ = require('underscore');
-var HumanModel = require('human-model');
-var logger = require('andlog');
+import _ from 'underscore';
+import HumanModel from 'human-model';
+import logger from 'andlog';
 
 
-module.exports = HumanModel.define({
+const Call = HumanModel.define({
     type: 'call',
-    initialize: function (attrs) {
+    initialize: function (attrs: unknown) {
         this.contact.onCall = true;
         // temporary, this won't stay here
         app.navigate('/chat/' + encodeURIComponent(this.contact.jid));
@@ -19,7 +18,7 @@ module.exports = HumanModel.define({
         state: ['string', true, 'inactive'],
         multiUser: ['boolean', true, false]
     },
-    end: function (reasonForEnding) {
+    end: function (reasonForEnding?: string) {
         var reason = reasonForEnding || 'success';
         this.contact.onCall = false;
         if (this.jingleSession) {
@@ -28,3 +27,6 @@ module.exports = HumanModel.define({
         this.collection.remove(this);
     }
 });
+
+export default Call;
+export type CallType = typeof Call;

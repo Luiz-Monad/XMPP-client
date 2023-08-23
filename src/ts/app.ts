@@ -4,28 +4,28 @@ declare const SERVER_CONFIG: any
 declare const client: any
 declare const me: any
 
-const _ = require('lodash')
+import _ from 'lodash';
 
-const Backbone = require('backbone')
-const asyncjs = require('async')
-const StanzaIO = require('stanza')
+import Backbone from 'backbone';
+import asyncjs from 'async';
+import StanzaIO from 'stanza';
 
-const AppState = require('./models/state')
-const MeModel = require('./models/me')
-const MainView = require('./views/main')
-const Router = require('./router')
-const AppStorage = require('./storage')
-const xmppEventHandlers = require('./helpers/xmppEventHandlers')
-const pushNotifications = require('./helpers/pushNotifications')
-const Notify = require('notify.js')
-const url = require('url')
+import AppState from './models/state';
+import MeModel from './models/me';
+import MainView from './views/main';
+import Router from './router';
+import AppStorage from './storage';
+import xmppEventHandlers from './helpers/xmppEventHandlers';
+import pushNotifications from './helpers/pushNotifications';
+import Notify from 'notify.js';
+import url from 'url';
 
-var SoundEffectManager = require('sound-effect-manager')
-let app = null
+import SoundEffectManager from 'sound-effect-manager';
 
-class App {
+export class App {
+
     launch() {
-        function parseConfig(json) {
+        function parseConfig(json: string) {
             var config = JSON.parse(json)
             var credentials = config.credentials
             if (!credentials) return config
@@ -180,12 +180,7 @@ class App {
     }
     serverConfig() {
         return SERVER_CONFIG
-    }
-    // TODO: add typings
-    private view: any
-    private api: any
-    private id: any
-    private timeInterval: any
+    }    
 } 
 app = new App()
 

@@ -1,6 +1,5 @@
-"use strict";
 
-module.exports = function (client, stanzas) {
+export default function (client, stanzas) {
     var types = stanzas.utils;
 
     var PushNotification = stanzas.define({

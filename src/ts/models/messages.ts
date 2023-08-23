@@ -1,11 +1,10 @@
-"use strict";
 
-var BaseCollection = require('./baseCollection');
-var Message = require('./message');
+import BaseCollection from './baseCollection';
+import Message, { MessageType } from './message';
 
 
-module.exports = BaseCollection.extend({
-    type: 'messages',
-    model: Message,
-    comparator: 'created'
-});
+export default class Messages extends BaseCollection<MessageType> {
+    type = 'messages';
+    model = Message;
+    comparator = 'created';
+};

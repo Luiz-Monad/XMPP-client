@@ -1,18 +1,18 @@
-"use strict";
 
-var BaseCollection = require('./baseCollection');
-var Resource = require('./resource');
+import BaseCollection from './baseCollection';
+import Resource, { ResourceType } from './resource';
 
-module.exports = BaseCollection.extend({
-    type: 'resources',
-    model: Resource,
-    comparator: function (res1, res2) {
+
+export default class Messages extends BaseCollection<ResourceType> {
+    type = 'resources';
+    model = Resource;
+    comparator = (res1: ResourceType, res2: ResourceType) => {
         var name1 = res1.mucDisplayName.toLowerCase(),
             name2 = res2.mucDisplayName.toLowerCase();
         return (name1 > name2) ? 1 : 
             (name1 < name2) ? -1 : 0;
-    },
-    search : function (letters, removeMe, addAll) {
+    };
+    search = (letters?: string, removeMe?: boolean, addAll?: boolean) => {
         if(letters == "" && !removeMe) return this;
 
         var collection = new module.exports(this.models);
@@ -26,5 +26,5 @@ module.exports = BaseCollection.extend({
             return pattern.test(nick);
         });
         return new module.exports(filtered);
-    }
-});
+    };
+};

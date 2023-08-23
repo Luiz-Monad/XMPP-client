@@ -1,10 +1,8 @@
-/*global app, me, client, Resample*/
-"use strict";
 
-var BasePage = require('./base');
-var templates = require('../templates');
+import BasePage from './base';
+import templates from 'templates';
 
-module.exports = BasePage.extend({
+const SettingsPage = BasePage.extend({
     template: templates.pages.settings,
     classBindings: {
         shouldAskForAlertsPermission: '.enableAlerts',
@@ -39,11 +37,11 @@ module.exports = BasePage.extend({
             });
         }
     },
-    handleAvatarChangeDragOver: function (e) {
+    handleAvatarChangeDragOver: function (e: Event) {
         e.preventDefault();
         return false;
     },
-    handleAvatarChange: function (e) {
+    handleAvatarChange: function (e: Event) {
         var file;
 
         e.preventDefault();
@@ -64,10 +62,12 @@ module.exports = BasePage.extend({
             fileTracker.readAsDataURL(file);
         }
     },
-    handleSoundNotifs: function (e) {
+    handleSoundNotifs: function (e: Event) {
         this.model.setSoundNotification(!this.model.soundEnabled);
     },
-    handleDisconnect: function (e) {
+    handleDisconnect: function (e: Event) {
         client.disconnect();
     }
 });
+
+export default SettingsPage;

@@ -1,19 +1,17 @@
-/*global app, client, URL, me*/
-"use strict";
 
-var HumanModel = require('human-model');
-var getUserMedia = require('getusermedia');
-var Contacts = require('./contacts');
-var Calls = require('./calls');
-var Contact = require('./contact');
-var MUCs = require('./mucs');
-var MUC = require('./muc');
-var ContactRequests = require('./contactRequests');
-var fetchAvatar = require('../helpers/fetchAvatar');
-var crypto = require('crypto');
-var StanzaIo = require('stanza');
+import HumanModel from 'human-model';
+import getUserMedia from 'getusermedia';
+import Contacts from './contacts';
+import Calls from './calls';
+import Contact from './contact';
+import MUCs from './mucs';
+import MUC from './muc';
+import ContactRequests from './contactRequests';
+import fetchAvatar from '../helpers/fetchAvatar';
+import crypto from 'crypto';
+import StanzaIo from 'stanza';
 
-module.exports = HumanModel.define({
+export default HumanModel.define({
     initialize: function (opts) {
         this.setAvatar(opts ? opts.avatarID : null);
 

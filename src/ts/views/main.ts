@@ -1,17 +1,14 @@
-/*global $, app, me, client*/
-"use strict";
 
-var HumanView = require('human-view');
-var StanzaIo = require('stanza');
-var templates = require('../templates');
-var ContactListItem = require('../views/contactListItem');
-var MUCListItem = require('../views/mucListItem');
-var CallView = require('../views/call');
-
-var ContactRequestItem = require('../views/contactRequest');
+import HumanView from 'human-view';
+import StanzaIo from 'stanza';
+import templates from 'templates';
+import ContactListItem from '../views/contactListItem';
+import MUCListItem from '../views/mucListItem';
+import CallView from '../views/call';
+import ContactRequestItem from '../views/contactRequest';
 
 
-module.exports = HumanView.extend({
+export default HumanView.extend({
     template: templates.body,
     initialize: function () {
         this.listenTo(app.state, 'change:title', this.handleTitle);

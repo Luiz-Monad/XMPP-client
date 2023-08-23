@@ -1,29 +1,22 @@
-/*global indexedDB*/
-"use strict";
 
-var AvatarStorage = require('./avatars');
-var RosterStorage = require('./roster');
-var DiscoStorage = require('./disco');
-var ArchiveStorage = require('./archive');
-var ProfileStorage = require('./profile');
+import AvatarStorage from './avatars';
+import RosterStorage from './roster';
+import DiscoStorage from './disco';
+import ArchiveStorage from './archive';
+import ProfileStorage from './profile';
 
-
-function Storage() {
-    this.db = null;
-    this.init = [];
-
-    this.avatars = new AvatarStorage(this);
-    this.roster = new RosterStorage(this);
-    this.disco = new DiscoStorage(this);
-    this.archive = new ArchiveStorage(this);
-    this.profiles = new ProfileStorage(this);
-}
-Storage.prototype = {
-    constructor: {
-        value: Storage
-    },
-    version: 3,
-    open: function (cb) {
+class Storage {
+    private db = null;
+    private init = [];
+    private avatars = new AvatarStorage(this);
+    private roster = new RosterStorage(this);
+    private disco = new DiscoStorage(this);
+    private archive = new ArchiveStorage(this);
+    private profiles = new ProfileStorage(this);
+    constructor() {
+    };
+    private version = 3;
+    open(cb) {
         cb = cb || function () {};
 
         var self = this;
@@ -43,8 +36,8 @@ Storage.prototype = {
         request.onerror = function (e) {
             cb(e);
         }
-    }
+    };
 };
 
 
-module.exports = Storage;
+export default Storage;

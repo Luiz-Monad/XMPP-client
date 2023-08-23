@@ -1,15 +1,13 @@
-/*global app*/
-"use strict";
 
-var async = require('async');
-var BaseCollection = require('./baseCollection');
-var Contact = require('./contact');
+import async from 'async';
+import BaseCollection from './baseCollection';
+import Contact, { ContactType } from './contact';
 
 
-module.exports = BaseCollection.extend({
-    type: 'contacts',
-    model: Contact,
-    comparator: function (model1, model2) {
+export default class Contacts extends BaseCollection<ContactType> {
+    type = 'contacts';
+    model = Contact;
+    comparator = (model1: ContactType, model2: ContactType) => {
         var show1 = model1.show;
         var show2 = model2.show;
 
@@ -42,8 +40,8 @@ module.exports = BaseCollection.extend({
 
             return 1;
         }
-    },
-    initialize: function (model, options) {
+    };
+    initialize(model: ContactType[], options: unknown) {
         this.bind('change', this.sort, this);
-    }
-});
+    };
+};

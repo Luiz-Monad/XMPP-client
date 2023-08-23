@@ -1,19 +1,17 @@
-/*global $, app, me, client*/
-"use strict";
 
-var _ = require('underscore');
-var StanzaIo = require('stanza');
-var StayDown = require('staydown');
-var BasePage = require('./base');
-var templates = require('../templates');
-var MUCRosterItem = require('../views/mucRosterItem');
-var Message = require('../views/mucMessage');
-var MessageModel = require('../models/message');
-var embedIt = require('../helpers/embedIt');
-var htmlify = require('../helpers/htmlify');
-var tempSubject = '';
+import _ from 'underscore';
+import StanzaIo from 'stanza';
+import StayDown from 'staydown';
+import BasePage from './base';
+import templates from 'templates';
+import MUCRosterItem from '../views/mucRosterItem';
+import Message from '../views/mucMessage';
+import MessageModel from '../models/message';
+import embedIt from '../helpers/embedIt';
+import htmlify from '../helpers/htmlify';
+let tempSubject = '';
 
-module.exports = BasePage.extend({
+const GroupChatPage = BasePage.extend({
     template: templates.pages.groupchat,
     initialize: function (spec) {
         this.editMode = false;
@@ -133,7 +131,7 @@ module.exports = BasePage.extend({
         this.staydown.checkdown();
         this.resizeInput();
     },
-    handleKeyDown: function (e) {
+    handleKeyDown: function (e: KeyboardEvent) {
         if ((e.which === 13 || e.which === 9) && !e.shiftKey) { // Enter or Tab
             if (this.$autoComplete.css('display') != 'none') {
                 var nickname = this.$autoComplete.find(">:nth-child(" + this.autoCompletePos + ")>:first-child").text();
@@ -190,7 +188,7 @@ module.exports = BasePage.extend({
             }
         }
     },
-    handleKeyUp: function (e) {
+    handleKeyUp: function (e: KeyboardEvent) {
         this.resizeInput();
         app.composing[this.model.jid] = this.$chatInput.val();
         if (this.typing && this.$chatInput.val().length === 0) {
@@ -320,23 +318,23 @@ module.exports = BasePage.extend({
         this.$chatInput.removeClass('editing');
         this.$chatInput.val('');
     },
-    clickStatusChange: function (e) {
+    clickStatusChange: function (e: Event) {
         tempSubject = e.target.textContent;
     },
-    blurStatusChange: function (e) {
+    blurStatusChange: function (e: Event) {
         var subject = e.target.textContent;
         if (subject == '')
             subject = true;
         client.setSubject(this.model.jid, subject);
         e.target.textContent = tempSubject;
     },
-    keyDownStatusChange: function (e) {
+    keyDownStatusChange: function (e: KeyboardEvent) {
         if (e.which === 13 && !e.shiftKey) {
             e.target.blur();
             return false;
         }
     },
-    clickMembersToggle: function (e) {
+    clickMembersToggle: function (e: Event) {
         var roster = $('.groupRoster'); // TODO: check for active roster not for any
         var pages = roster.closest('.page');
         var toggleVisible = roster.css('visibility') == 'hidden'
@@ -421,3 +419,5 @@ module.exports = BasePage.extend({
         }
     }
 });
+
+export default GroupChatPage;

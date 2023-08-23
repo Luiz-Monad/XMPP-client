@@ -1,11 +1,9 @@
-/*global app, client*/
-"use strict";
 
-var HumanModel = require('human-model');
-var fetchAvatar = require('../helpers/fetchAvatar');
+import HumanModel from 'human-model';
+import fetchAvatar from '../helpers/fetchAvatar';
 
 
-module.exports = HumanModel.define({
+const Resource = HumanModel.define({
     initialize: function () {},
     type: 'resource',
     props: {
@@ -136,3 +134,6 @@ module.exports = HumanModel.define({
     },
     
 });
+
+export default Resource;
+export type ResourceType = typeof Resource;

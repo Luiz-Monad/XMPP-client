@@ -1,19 +1,17 @@
 /*global app, me, client, URL*/
-"use strict";
 
-var _ = require('underscore');
-var crypto = require('crypto');
-var async = require('async');
-var uuid = require('node-uuid');
-var HumanModel = require('human-model');
-var Resources = require('./resources');
-var Messages = require('./messages');
-var Message = require('./message');
-var logger = require('andlog');
-var fetchAvatar = require('../helpers/fetchAvatar');
+import _ from 'underscore';
+import crypto from 'crypto';
+import async from 'async';
+import uuid from 'node-uuid';
+import HumanModel from 'human-model';
+import Resources from './resources';
+import Messages from './messages';
+import Message from './message';
+import logger from 'andlog';
+import fetchAvatar from '../helpers/fetchAvatar';
 
-
-module.exports = HumanModel.define({
+const Contact = HumanModel.define({
     initialize: function (attrs) {
         if (attrs.jid) {
             this.id = attrs.jid;
@@ -395,3 +393,6 @@ module.exports = HumanModel.define({
         app.storage.roster.add(data);
     }
 });
+
+export default Contact;
+export type ContactType = typeof Contact;

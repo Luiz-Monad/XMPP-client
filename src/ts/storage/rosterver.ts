@@ -1,31 +1,26 @@
-"use strict";
 
 // SCHEMA
 //    jid: 'string',
 //    ver: 'string'
 
-
-function RosterVerStorage(storage) {
-    this.storage = storage;
-}
-
-RosterVerStorage.prototype = {
-    constructor: {
-        value: RosterVerStorage
-    },
-    setup: function (db) {
+class RosterVerStorage {
+    private storage: any;
+    constructor(storage: any) {
+        this.storage = storage;
+    };
+    setup(db) {
         if (db.objectStoreNames.contains('rosterver')) {
             db.deleteObjectStore('rosterver');
         }
         db.createObjectStore('rosterver', {
             keyPath: 'jid'
         });
-    },
-    transaction: function (mode) {
+    };
+    transaction(mode) {
         var trans = this.storage.db.transaction('rosterver', mode);
         return trans.objectStore('rosterver');
-    },
-    set: function (jid, ver, cb) {
+    };
+    set(jid, ver, cb) {
         cb = cb || function () {};
         var data = {
             jid: jid,
@@ -36,8 +31,8 @@ RosterVerStorage.prototype = {
             cb(false, data);
         };
         request.onerror = cb;
-    },
-    get: function (jid, cb) {
+    };
+    get(jid, cb) {
         cb = cb || function () {};
         if (!jid) {
             return cb('not-found');
@@ -51,16 +46,16 @@ RosterVerStorage.prototype = {
             cb(false, request.result);
         };
         request.onerror = cb;
-    },
-    remove: function (jid, cb) {
+    };
+    remove(jid, cb) {
         cb = cb || function () {};
         var request = this.transaction('readwrite')['delete'](jid);
         request.onsuccess = function (e) {
             cb(false, request.result);
         };
         request.onerror = cb;
-    }
+    };
 };
 
 
-module.exports = RosterVerStorage;
+export default RosterVerStorage;

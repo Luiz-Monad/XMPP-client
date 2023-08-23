@@ -4,9 +4,9 @@ declare const SERVER_CONFIG: any
 declare const client: any
 declare const me: any
 
-const Backbone = require('backbone')
+const _ = require('lodash')
 
-Backbone.$ = $
+const Backbone = require('backbone')
 const asyncjs = require('async')
 const StanzaIO = require('stanza')
 
@@ -188,6 +188,7 @@ class App {
     private timeInterval: any
 } 
 app = new App()
-module.exports = app
 
 $(()=> app.launch())
+
+export default app

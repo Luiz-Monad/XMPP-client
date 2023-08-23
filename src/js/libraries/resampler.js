@@ -110,5 +110,5 @@ var Resample = (function (canvas) {
  // and render anything on the screen
  // let's keep this DOM node in RAM
  // for all resizes we want
- this.document.createElement("canvas"))
+ window.document.createElement("canvas"))
 );

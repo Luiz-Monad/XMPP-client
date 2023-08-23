@@ -3,81 +3,102 @@ const batch = require('gulp-batch');
 const concatCss = require('gulp-concat-css');
 const fs = require('fs');
 const jade = require('gulp-jade');
-const mkdirp = require('mkdirp');
+const { mkdirp } = require('mkdirp');
 const stylus = require('gulp-stylus');
 const templatizer = require('templatizer');
 const gitrev = require('git-rev');
 const webpack = require("webpack-stream");
 const gutil = require("gulp-util");
-const { exec } = require('child_process');
-const once = require('once')
+const once = require('once');
+const { executer } = require('./executer');
 
 function getConfig() {
     const config = fs.readFileSync('./dev_config.json');
     return JSON.parse(config);
 }
 
-const tasks = {}
-const task = (name, fn) => {
+const tasks = {};
+const task = (name) => (fn) => {
     if (fn) {
         tasks[name] = once(fn);
         return;
     }
-    return () => {
-        const t = tasks[name]()
-        t.displayName = name
-        return t
-    }
-}
+    const t = tasks[name]();
+    t.displayName = name;
+    return t
+};
 
-const startTask = task('start')
-const watchTask = task('watch')
-const compileTask = task('compile')
-const watchRecompileTask = task('watchRecompile')
-const resourcesTask = task('resources')
-const clientTask = task('client')
-const webpackTask = task('webpack')
-const configTask = task('config')
-const manifestTask = task('manifest')
-const jadeTemplatesTask = task('jadeTemplates')
-const jadeViewsTask = task('jadeViews')
-const jadeTask = task('jade')
-const cssTask = task('css')
-const concatCssTask = task('concatCss')
-const stylusTask = task('stylus')
-const nodeRunTask = task('nodeRun')
-const nodeWatchTask = task('nodeWatch')
-const serverTask = task('server')
+const startTask = task('start');
+const watchTask = task('watch');
+const compileTask = task('compile');
+const watchRecompileTask = task('watchRecompile');
+const resourcesTask = task('resources');
+const clientTask = task('client');
+const webpackWatchTask = task('webpack');
+const webpackTask = task('webpackCompile');
+const configTask = task('config');
+const manifestTask = task('manifest');
+const jadeTemplatesTask = task('jadeTemplates');
+const jadeViewsTask = task('jadeViews');
+const jadeTask = task('jade');
+const cssTask = task('css');
+const concatCssTask = task('concatCss');
+const stylusTask = task('stylus');
+const nodeRunTask = task('nodeRun');
+const nodeWatchTask = task('nodeWatch');
+const serverTask = task('server');
 
-task('start', () => parallel(serverTask(), series(compileTask(), nodeRunTask())))
+startTask(() => parallel(serverTask(), series(compileTask(), nodeRunTask())))
 
-task('watch', () => series(compileTask(), parallel(watchRecompileTask(), nodeWatchTask())))
+watchTask(() => series(parallel(watchRecompileTask(), webpackWatchTask(), nodeWatchTask())))
 
-task('compile', () => parallel(resourcesTask(), clientTask(), configTask(), manifestTask()));
+compileTask(() => parallel(resourcesTask(), clientTask(), configTask(), manifestTask()));
 
-task('watchRecompile', () => (cb) => {
+watchRecompileTask(() => (cb) => {
+    const keepRunning = (fn) => (done) => {
+        fn();
+        done();
+    };
     watch([
         './src/**',
+        '!./src/js/**', //webpack
+        '!./src/css/client.css',
         '!./src/js/templates.js',
-        './dev_config.json'
-    ], batch(function (events, done) {
+        './package.json',
+        './dev_config.json',
+        './webpack.config.js',
+    ], keepRunning(batch({}, (events, done) => {
         console.log('==> Recompiling Kaiwa');
-        compileTask()(done);
-    }, cb));
+        const cmd = ['yarn', 'run', 'gulp', 'compile'];
+        executer(cmd, () => {
+            console.log('==> Done!');
+            done()   
+        });
+    })));
 });
 
-task('resources', () => (cb) => {
-    return src('./src/resources/**')
+resourcesTask(() => (cb) => {
+    src('./src/resources/**')
         .pipe(dest('./public'))
         .on('end', cb);
 });
 
-task('client', () => parallel(jadeTemplatesTask(), jadeViewsTask(), webpackTask()));
+clientTask(() => parallel(jadeTemplatesTask(), jadeViewsTask(), webpackTask()));
 
-task('webpack', () => (cb) => {
+webpackWatchTask(() => (cb) => {
+    const cmd = [
+        'yarn', 'run', 
+        'webpack-cli', 'watch', 
+        '--progress', 
+        '--mode', 'development'
+    ];
+    executer(cmd, cb)
+})
+
+webpackTask(() => (cb) => {
     webpack(Object.assign({
             plugins: []
-        }, require('./webpack.config.js')), null, function(err, stats) {
+        }, require('./webpack.config.js')), null, (err, stats) => {
             if(err) return cb(JSON.stringify(err));
             gutil.log("[webpack]", stats.toString());
             return stats;
@@ -86,15 +107,15 @@ task('webpack', () => (cb) => {
         .on('end', cb);
 });
 
-task('config', () => (cb) => {
+configTask(() => (cb) => {
     const config = getConfig();
     gitrev.short(function (commit) {
         config.server.softwareVersion = {
             "name": config.server.name,
-            "version": commit
+            "version": commit,
         }
         config.server.baseUrl = config.http.baseUrl
-        mkdirp('./public', function (error) {
+        mkdirp('./public').then((error) => {
             if (error) {
                 cb(error);
                 return;
@@ -107,17 +128,17 @@ task('config', () => (cb) => {
     })
 });
 
-task('manifest', () => (cb) => {
+manifestTask(() => (cb) => {
     const pkg = require('./package.json');
     const config = getConfig();
 
-    fs.readFile('./src/manifest/manifest.cache', 'utf-8', function (error, content) {
+    fs.readFile('./src/manifest/manifest.cache', 'utf-8', (error, content) => {
         if (error) {
             cb(error);
             return;
         }
 
-        mkdirp('./public', function (error) {
+        mkdirp('./public').then((error) => {
             if (error) {
                 cb(error);
                 return;
@@ -131,18 +152,18 @@ task('manifest', () => (cb) => {
     });
 });
 
-task('jadeTemplates', () => (cb) => {
+jadeTemplatesTask(() => (cb) => {
     templatizer('./src/jade/templates', './src/js/templates.js', cb);
 });
 
-task('jadeViews', () => series(cssTask(), jadeTask()));
+jadeViewsTask(() => series(cssTask(), jadeTask()));
 
-task('jade', () => (cb) => {
+jadeTask(() => (cb) => {
     const config = getConfig();
-    return src([
-        './src/jade/views/*',
-        '!./src/jade/views/layout.jade'
-    ])
+    src([
+            './src/jade/views/*',
+            '!./src/jade/views/layout.jade'
+        ])
         .pipe(jade({
             locals: {
                 config: config
@@ -152,11 +173,10 @@ task('jade', () => (cb) => {
         .on('end', cb);
 });
 
-task('css', () => series(stylusTask(), concatCssTask()));
+cssTask(() => series(stylusTask(), concatCssTask()));
 
-task('concatCss', () => (cb) => {
-    return src([
-            './build/css/*.css',
+concatCssTask(() => (cb) => {
+    src([
             './src/css/*.css'
         ])
         .pipe(concatCss('app.css'))
@@ -164,51 +184,26 @@ task('concatCss', () => (cb) => {
         .on('end', cb);
 });
 
-task('stylus', () => (cb) => {
-    return src('./src/stylus/client.styl')
+stylusTask(() => (cb) => {
+    src('./src/stylus/client.styl')
         .pipe(stylus())
-        .pipe(dest('./build/css'))
+        .pipe(dest('./src/css'))
         .on('end', cb);
 });
 
-task('nodeRun', () => (cb) => {
-    const cmd = 'node ./src/server.js';
-    exec(cmd, (err, stdout) => {
-        if (err) {
-            console.error(`Error running Docker command: ${err}`);
-            cb(err);
-        } else {
-            console.log(`Docker command output: ${stdout}`);
-            cb();
-        }
-    });
+nodeRunTask(() => (cb) => {
+    const cmd = ['node', '--watch', './src/server.js'];
+    executer(cmd, cb)
 })
 
-task('nodeWatch', () => (cb) => {
-    const cmd = 'node --watch ./src/server.js';
-    exec(cmd, (err, stdout) => {
-        if (err) {
-            console.error(`Error running Docker command: ${err}`);
-            cb(err);
-        } else {
-            console.log(`Docker command output: ${stdout}`);
-            cb();
-        }
-    });
+nodeWatchTask(() => (cb) => {
+    const cmd = ['node', '--watch', './src/server.js'];
+    executer(cmd, cb)
 })
 
-task('server', () => (cb) => {
+serverTask(() => (cb) => {
     const config = getConfig();
-    const cmd = config.server.cmd.join(' ');
-    exec(cmd, (err, stdout) => {
-        if (err) {
-            console.error(`Error running Docker command: ${err}`);
-            cb(err);
-        } else {
-            console.log(`Docker command output: ${stdout}`);
-            cb();
-        }
-    });
+    executer(config.server.cmd, cb)
 });
 
 exports.compile = compileTask();
@@ -217,6 +212,7 @@ exports.watch = watchTask();
 exports.watchRecompile = watchRecompileTask()
 exports.resources = resourcesTask();
 exports.client = clientTask();
+exports.webpackWatch = webpackWatchTask();
 exports.webpack = webpackTask();
 exports.config = configTask();
 exports.manifest = manifestTask();

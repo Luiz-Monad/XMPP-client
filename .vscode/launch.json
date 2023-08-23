@@ -2,13 +2,32 @@
   "version": "0.1.0",
   "configurations": [
     {
-      "name": "Launch src/server.js",
+      "name": "node src/server.js",
       "type": "node",
       "program": "src/server.js",
       "stopOnEntry": false,
       "args": [],
       "cwd": ".",
       "runtimeExecutable": null,
+      "runtimeArgs": [
+        "--nolazy"
+      ],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "sourceMaps": false,
+      "request": "launch",
+    },
+    {
+      "name": "gulp watch",
+      "type": "node",
+      "program": "./node_modules/gulp/bin/gulp.js",
+      "stopOnEntry": false,
+      "args": [
+        "watch"
+      ],
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "",
       "runtimeArgs": [
         "--nolazy"
       ],
@@ -48,7 +67,6 @@
       "cwd": "${workspaceFolder}",
       "runtimeExecutable": "",
       "runtimeArgs": [
-        "--inspect-brk",
         "--nolazy"
       ],
       "env": {

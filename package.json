@@ -10,7 +10,8 @@
     "client": "gulp client",
     "compile": "gulp compile",
     "server": "gulp server",
-    "watch": "gulp watch"
+    "watch": "gulp watch",
+    "webpack": "gulp webpack"
   },
   "dependencies": {
     "@lukekarrys/jade-runtime": "1.11.1",

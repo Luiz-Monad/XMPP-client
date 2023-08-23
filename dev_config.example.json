@@ -16,7 +16,7 @@
       "sasl": "scram-sha-1",
       "securePasswordStorage": true,
       "muc": "chat.example.com",
-      "startup": "http://localhost:8000",
+      "startup": "http://localhost:5280",
       "admin": "admin",
       "gravatar": false,
       "keepalive": {
@@ -24,13 +24,9 @@
           "timeout": 15
       },
       "cmd": [
-        "docker", "run",
-        "--name", "ejabberd",
-        "-d",
-        "-p", "5222:5222",
-        "-p", "5280:5280",
-        "-v", "./ejabberd.yml:/home/ejabberd/conf/ejabberd.yml",
-        "ejabberd/ecs"
+        "yarn", "run",
+        "gulp", "start",
+        "--gulpfile", "xmpp_server/Gulpfile.js"
       ]
   }
 }

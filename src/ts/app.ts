@@ -1,9 +1,5 @@
 'use strict';
 
-declare const SERVER_CONFIG: any
-declare const client: any
-declare const me: any
-
 import _ from 'lodash';
 
 import Backbone from 'backbone';
@@ -23,6 +19,20 @@ import url from 'url';
 import SoundEffectManager from 'sound-effect-manager';
 
 export class App {
+    config: any
+    notifications: typeof Notify
+    soundManager: typeof SoundEffectManager
+    storage: typeof AppStorage
+    composing: any
+    timeInterval: any
+    mucInfos: any
+
+    state: typeof AppState
+
+    view: any
+    api: typeof 
+    id: any
+    timeInterval: any
 
     launch() {
         function parseConfig(json: string) {

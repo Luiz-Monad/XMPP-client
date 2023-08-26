@@ -11,7 +11,7 @@ import fetchAvatar from '../helpers/fetchAvatar';
 import crypto from 'crypto';
 import StanzaIo from 'stanza';
 
-export default HumanModel.define({
+const Me = HumanModel.define({
     initialize: function (opts) {
         this.setAvatar(opts ? opts.avatarID : null);
 
@@ -182,7 +182,7 @@ export default HumanModel.define({
 
         var self = this;
 
-        app.storage.profiles.get(this.jid.bare, function (err, profile) {
+        app.storage.profiles.get(this.jid.bare, function (err: any, profile: { status: any; avatarID: any; soundEnabled: any; }) {
             if (!err) {
                 self.nick = self.jid.local;
                 self.status = profile.status;
@@ -291,3 +291,6 @@ export default HumanModel.define({
         }
     }
 });
+
+export default Me;
+export type MeType = InstanceType<typeof Me>;

@@ -6,6 +6,10 @@ import { ContactType } from '../models/contact';
 
 
 export default HumanView.extend({
+    model: {
+        contact: <ContactType> {},
+    },
+    $buttons: <JQuery<HTMLElement>> {},
     template: templates.includes.call,
     classBindings: {
         state: ''
@@ -68,8 +72,8 @@ export default HumanView.extend({
     },
     // we want to make sure we show the appropriate buttons
     // when in various stages of the call
-    handleCallStateChange: function (model, callState) {
-        var state = callState || this.model.state;
+    handleCallStateChange: function (model: any, callState: any) {
+        var state: keyof typeof map = callState || this.model.state;
         // hide all
         this.$buttons.hide();
 

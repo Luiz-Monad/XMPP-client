@@ -1,4 +1,3 @@
-/*global app, me, client, URL*/
 
 import _ from 'underscore';
 import crypto from 'crypto';
@@ -395,4 +394,4 @@ const Contact = HumanModel.define({
 });
 
 export default Contact;
-export type ContactType = typeof Contact;
+export type ContactType = InstanceType<typeof Contact>;

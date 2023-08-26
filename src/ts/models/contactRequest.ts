@@ -10,4 +10,4 @@ const ContactRequest = HumanModel.define({
 });
 
 export default ContactRequest;
-export type ContactRequestType = typeof ContactRequest;
+export type ContactRequestType = InstanceType<typeof ContactRequest>;

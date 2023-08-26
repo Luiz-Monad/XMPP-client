@@ -5,7 +5,7 @@ import ChatPage from './pages/chat';
 import GroupChatPage from './pages/groupchat';
 
 
-export default Backbone.Router.extend({
+const Router = Backbone.Router.extend({
     routes: {
         '': 'settings',
         'chat/:jid': 'chat',
@@ -47,3 +47,5 @@ export default Backbone.Router.extend({
         window.location = 'login.html';
     }
 });
+
+export default Router;

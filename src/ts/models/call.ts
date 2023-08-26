@@ -22,11 +22,12 @@ const Call = HumanModel.define({
         var reason = reasonForEnding || 'success';
         this.contact.onCall = false;
         if (this.jingleSession) {
-            this.jingleSession.end(reasonForEnding);
+            this.jingleSession.end(reason);
         }
         this.collection.remove(this);
     }
 });
 
 export default Call;
-export type CallType = typeof Call;
+export type CallType = InstanceType<typeof Call>;
+

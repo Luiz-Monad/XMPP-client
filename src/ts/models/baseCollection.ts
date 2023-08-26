@@ -1,12 +1,12 @@
 
 // our base collection
-import Backbone, { Model } from 'backbone';
+import Backbone, { Model as BModel, ObjectHash } from 'backbone';
 
 
-export default class BaseCollection<TModel extends Model = Model> extends Backbone.Collection<TModel> {
+export default class BaseCollection<Props extends ObjectHash = any, Model extends BModel<Props> = BModel<Props>> extends Backbone.Collection<Model> {
     // ###next
     // returns next item when given an item in the collection
-    next(item: TModel, filter?: (_: TModel) => boolean, start?: TModel): TModel {
+    next(item: Model, filter?: (_: Model) => boolean, start?: Model): Model {
         var i = this.indexOf(item),
             newItem;
 
@@ -28,7 +28,7 @@ export default class BaseCollection<TModel extends Model = Model> extends Backbo
 
     // ###prev
     // returns previous item when given an item in the collection
-    prev(item: TModel, filter?: (_: TModel) => boolean, start?: TModel): TModel {
+    prev(item: Model, filter?: (_: Model) => boolean, start?: Model): Model {
         var i = this.indexOf(item),
             newItem;
         if (i === -1) {

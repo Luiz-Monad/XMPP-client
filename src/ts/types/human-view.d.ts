@@ -14,7 +14,7 @@ declare module 'human-view' {
         classBindings?: Record<keyof Props, string>;
     }
 
-    interface HumanViewMethods<Props = {}, Model extends Backbone.Model<Props> = Backbone.Model<Props>> {
+    export interface HumanViewMethods<Props = {}, Model extends Backbone.Model<Props> = Backbone.Model<Props>> {
         registerSubview(this: HumanView<Props, Model>, view: Backbone.View<Backbone.Model>): Backbone.View<Backbone.Model>;
         renderSubview(this: HumanView<Props, Model>, view: Backbone.View<Backbone.Model>, container: string | HTMLElement): Backbone.View<Backbone.Model>;
         registerBindings(this: HumanView<Props, Model>, specificModel?: Props, Model, bindings?: HumanViewOptions<Props, Model>): this;
@@ -29,14 +29,14 @@ declare module 'human-view' {
         remove(this: HumanView<Props, Model>): this;
     }
 
-    interface HumanView<Props = {}, Model extends Backbone.Model<Props> = Backbone.Model<Props>> extends Backbone.View<Model>, HumanViewMethods<Props, Model> {
+    export interface HumanView<Props = {}, Model extends Backbone.Model<Props> = Backbone.Model<Props>> extends Backbone.View<Model>, HumanViewMethods<Props, Model> {
         options?: HumanViewOptions<Props, Model>;
     }
 
-    interface HumanViewConstructor {
+    export interface HumanViewConstructor {
         new <Props = {}, Model extends Backbone.Model<Props> = Backbone.Model<Props>>(options?: HumanViewOptions<Props, Model>): HumanView<Props, Model>;
         prototype: HumanView<any, any>;
-        extend<Props, Model extends Backbone.Model<Props> = Backbone.Model<Props>>(protoProps: Props & ThisType<HumanView<Props, Model> & Props>, staticProps?: any
+        extend<Props = {}, Model extends Backbone.Model<Props> = Backbone.Model<Props>>(protoProps: Props & ThisType<HumanView<Props, Model> & Props>, staticProps?: any
         ): this & Props;
     }
 

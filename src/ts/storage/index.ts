@@ -21,11 +21,11 @@ class Storage {
 
         var self = this;
         var request = indexedDB.open('datastorage', this.version);
-        request.onsuccess = function (e) {
+        request.onsuccess = function (e: Event) {
             self.db = e.target.result;
             cb(null, false, self.db);
         };
-        request.onupgradeneeded = function (e) {
+        request.onupgradeneeded = function (e: Event) {
             var db = e.target.result;
             self.avatars.setup(db);
             self.roster.setup(db);

@@ -4,10 +4,10 @@ import BaseCollection from './baseCollection';
 import MUC, { MUCType } from './muc';
 
 
-export default class MUCs extends BaseCollection<MUCType> {
-    type = 'mucs';
-    model = MUC;
-    comparator = (model1: MUCType, model2: MUCType) => {
+module.exports = BaseCollection.extend({
+    type: 'mucs',
+    model: MUC,
+    comparator: function (model1: MUCType, model2: MUCType) {
         var name1 = model1.displayName.toLowerCase();
         var name2 = model2.displayName.toLowerCase();
         if (name1 === name2) {
@@ -17,11 +17,11 @@ export default class MUCs extends BaseCollection<MUCType> {
             return -1;
         }
         return 1;
-    };
-    initialize(model, options) {
+    },
+    initialize: function (model, options) {
         this.bind('change', this.sort, this);
-    };
-    fetch() {
+    },
+    fetch: function () {
         var self = this;
         app.whenConnected(function () {
             client.getBookmarks(function (err, res) {
@@ -38,8 +38,8 @@ export default class MUCs extends BaseCollection<MUCType> {
                 self.trigger('loaded');
             });
         });
-    };
-    save(cb) {
+    },
+    save: function (cb) {
         var self = this;
         app.whenConnected(function () {
             var models = [];
@@ -51,7 +51,7 @@ export default class MUCs extends BaseCollection<MUCType> {
                     autoJoin: model.autoJoin
                 });
             });
-            client.setBookmarks({ conferences: models }, cb);
+            client.setBookmarks({conferences: models}, cb);
         });
-    };
-};
+    },
+});

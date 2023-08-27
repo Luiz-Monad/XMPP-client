@@ -4,10 +4,10 @@ import BaseCollection from './baseCollection';
 import Contact, { ContactType } from './contact';
 
 
-export default class Contacts extends BaseCollection<ContactType> {
-    type = 'contacts';
-    model = Contact;
-    comparator = (model1: ContactType, model2: ContactType) => {
+module.exports = BaseCollection.extend({
+    type: 'contacts',
+    model: Contact,
+    comparator: function (model1: ContactType, model2: ContactType) {
         var show1 = model1.show;
         var show2 = model2.show;
 
@@ -40,8 +40,8 @@ export default class Contacts extends BaseCollection<ContactType> {
 
             return 1;
         }
-    };
-    initialize(model: ContactType[], options: unknown) {
+    },
+    initialize: function (model: ContactType[], options: unknown) {
         this.bind('change', this.sort, this);
-    };
-};
+    }
+});

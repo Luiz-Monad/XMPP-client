@@ -2,17 +2,16 @@
 import BaseCollection from './baseCollection';
 import Resource, { ResourceType } from './resource';
 
-
-export default class Messages extends BaseCollection<ResourceType> {
-    type = 'resources';
-    model = Resource;
-    comparator = (res1: ResourceType, res2: ResourceType) => {
+module.exports = BaseCollection.extend({
+    type: 'resources',
+    model: Resource,
+    comparator: function (res1: ResourceType, res2: ResourceType) {
         var name1 = res1.mucDisplayName.toLowerCase(),
             name2 = res2.mucDisplayName.toLowerCase();
         return (name1 > name2) ? 1 : 
             (name1 < name2) ? -1 : 0;
-    };
-    search = (letters?: string, removeMe?: boolean, addAll?: boolean) => {
+    },
+    search : function (letters?: string, removeMe?: boolean, addAll?: boolean) {
         if(letters == "" && !removeMe) return this;
 
         var collection = new module.exports(this.models);
@@ -26,5 +25,5 @@ export default class Messages extends BaseCollection<ResourceType> {
             return pattern.test(nick);
         });
         return new module.exports(filtered);
-    };
-};
+    },
+});

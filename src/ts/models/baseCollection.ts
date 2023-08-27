@@ -3,10 +3,10 @@
 import Backbone, { Model as BModel, ObjectHash } from 'backbone';
 
 
-export default class BaseCollection<Props extends ObjectHash = any, Model extends BModel<Props> = BModel<Props>> extends Backbone.Collection<Model> {
+module.exports = Backbone.Collection.extend({
     // ###next
     // returns next item when given an item in the collection
-    next(item: Model, filter?: (_: Model) => boolean, start?: Model): Model {
+    next: function (item, filter, start) {
         var i = this.indexOf(item),
             newItem;
 
@@ -24,11 +24,11 @@ export default class BaseCollection<Props extends ObjectHash = any, Model extend
             }
         }
         return newItem;
-    };
+    },
 
     // ###prev
     // returns previous item when given an item in the collection
-    prev(item: Model, filter?: (_: Model) => boolean, start?: Model): Model {
+    prev: function (item, filter, start) {
         var i = this.indexOf(item),
             newItem;
         if (i === -1) {
@@ -45,5 +45,5 @@ export default class BaseCollection<Props extends ObjectHash = any, Model extend
             }
         }
         return this.at(i);
-    };
-};
+    },
+});

@@ -20,7 +20,7 @@ declare module 'human-model' {
         keyof PropTypeMapping;
 
     type ModelPropSimple<T> =
-        T extends keyof PropTypeMapping ? PropTypeMapping<T> :
+        T extends keyof PropTypeMapping ? PropTypeMapping[T] | undefined :
         never;
 
     type ValidPropTuple =
@@ -47,36 +47,49 @@ declare module 'human-model' {
         T extends { type: infer L, required?: false } & ModelPropExtra ? PropTypeMapping[L] | undefined :
         never;
 
+    type ValidPropCtor =
+        new (...args: any) => any;
+
+    type ModelPropCtor<T> =
+        T extends new (...args: any) => infer R ? R :
+        never;
+
     type ValidProp =
         ValidPropSimple |
         ValidPropTuple |
-        ValidPropObject;
+        ValidPropObject |
+        ValidPropCtor;
 
     type ModelProp<T> =
         T extends ValidPropSimple ? ModelPropSimple<T> :
         T extends ValidPropTuple ? ModelPropTuple<T> :
         T extends ValidPropObject ? ModelPropObject<T> :
+        T extends ValidPropCtor ? ModelPropCtor<T> :
         never;
 
     type ValidDerivedProp = {
-        deps: string[];
-        fn: (this: any) => any;
+        deps?: string[];
         cache?: boolean;
+        fn: any;
     };
 
-    type ModelDerivedProp<T, B> = {
-        deps: string[];
-        fn: (this: B) => T;
-        cache?: boolean;
-    };
+    type ModelDerivedProp<T> =
+        ReturnType<T['fn']>;
 
     type ValidCollProp =
         any;
 
     type ModelCollProp<T> =
-        any;
+        T;
 
-    type ValidDefinitionBase<T> = {
+    type DefinitionConstraint = {
+        props?: any;
+        session?: any;
+        derived?: any;
+        collections?: any;
+    }
+
+    type ValidDefinitionBase<T extends DefinitionConstraint> = {
         type?: string;
         props?: {
             [K in keyof T['props']]: ValidProp
@@ -92,12 +105,12 @@ declare module 'human-model' {
         };
     };
 
-    type ValidDefinition<T> =
+    type ValidDefinition<T extends DefinitionConstraint> =
         ValidDefinitionBase<T> & {
-            [K in (Exclude<T, keyof ValidDefinitionBase>)]: T[K];
+            [K in (Exclude<keyof T, keyof DefinitionConstraint>)]: T[K];
         }
 
-    type ModelDefinition<T> =
+    type ModelDefinition<T extends DefinitionConstraint> =
         {
             [K in keyof T['props']]: ModelProp<T['props'][K]>
         } & {
@@ -107,56 +120,58 @@ declare module 'human-model' {
         } & {
             [K in keyof T['collections']]: ModelCollProp<T['collections'][K]>;
         } & {
-            [K in (Exclude<T, keyof ValidDefinitionBase>)]: T[K];
+            [K in (Exclude<keyof T, keyof DefinitionConstraint>)]: T[K];
         }
 
-    export interface HumanModel<Props = {}> extends Backbone.Model<Props> {
+    export interface HumanModel<Props extends Backbone.ObjectHash = any, SetOptions extends Backbone.ModelSetOptions = any, InitOptions = any> extends Backbone.Model<Props, SetOptions, InitOptions> {
         // inheritable methods to the Model prototype.
         getId(): string | number;
-        initialize(): this;
-        parse(resp: any, options: any): any;
-        serialize(): any;
+        // initialize(attributes?: Props, options?: Backbone.CombinedModelConstructorOptions<InitOptions, this>): void;
+        // parse(response: any, options?: any): any;
+        serialize(): this;
         remove(): this;
-        set(key: string | Record<string, any>, value?: any, options?: any): this;
-        get(attr: string): any;
+        // set<A extends _StringKey<Props>>(attributeName: A, value?: Props[A], options?: S): this;
+        // set(attributeName: Partial<Props>, options?: S): this;
+        // set<A extends _StringKey<Props>>(attributeName: A | Partial<Props>, value?: Props[A] | S, options?: S): this;
+        // get<A extends _StringKey<Props>>(attributeName: A): Props[A] | undefined;
         toggle(property: string): this;
-        previousAttributes(): Record<string, any>;
-        save(key?: string | Record<string, any>, val?: any, options?: any): any;
-        fetch(options?: any): any;
-        destroy(options?: any): any;
-        hasChanged(attr?: string): boolean;
-        changedAttributes(diff?: any): Record<string, any> | false;
-        toJSON(): any;
-        has(attr: string): boolean;
-        url(): string;
-        isNew(): boolean;
-        clone(): this;
-        isValid(options?: any): boolean;
-        escape(attr: string): string;
-        sync(): any;
-        unset(attr: string, options?: any): this;
-        clear(options?: any): this;
+        // previousAttributes(): Partial<Props>;
+        // save(attributes?: Partial<Props> | null, options?: ModelSaveOptions): JQueryXHR;
+        // fetch(options?: ModelFetchOptions): JQueryXHR;
+        // destroy(options?: ModelDestroyOptions): JQueryXHR | false;
+        // hasChanged(attribute?: _StringKey<Props>): boolean;
+        // changedAttributes(attributes?: Partial<Props>): Partial<Props> | false;
+        // toJSON(options?: any): any;
+        // has(attribute: _StringKey<Props>): boolean;
+        // url: () => string;
+        // isNew(): boolean;
+        clone(): this; //override
+        // isValid(options?: any): boolean;
+        // escape(attribute: _StringKey<Props>): string;
+        // sync(...arg: any[]): JQueryXHR;
+        // unset(attribute: _StringKey<Props>, options?: Silenceable): this;
+        // clear(options?: Silenceable): this;
+        // previous<A extends _StringKey<Props>>(attribute: A): Props[A] | null | undefined;
         addListVal(prop: string, value: any, prepend?: boolean): this;
-        previous(attr: string): any;
         removeListVal(prop: string, value: any): this;
         hasListVal(prop: string, value: any): boolean;
 
         // mixins from underscore
-        keys(): string[];
-        values(): any[];
-        pairs(): any[];
-        invert(): any;
-        pick<A extends _StringKey<this>>(keys: A[]): Partial<Pick<this, A>>;
-        pick<A extends _StringKey<this>>(...keys: A[]): Partial<Pick<this, A>>;
-        pick(fn: (value: any, key: any, object: any) => any): Partial<this>;
-        omit<A extends _StringKey<this>>(keys: A[]): Partial<_Omit<this, A>>;
-        omit<A extends _StringKey<this>>(...keys: A[]): Partial<_Omit<this, A>>;
-        omit(fn: (value: any, key: any, object: any) => any): Partial<this>;
+        // keys(): string[];
+        // values(): any[];
+        // pairs(): any[];
+        // invert(): any;
+        // pick<A extends _StringKey<this>>(keys: A[]): Partial<Pick<this, A>>;
+        // pick<A extends _StringKey<this>>(...keys: A[]): Partial<Pick<this, A>>;
+        // pick(fn: (value: any, key: any, object: any) => any): Partial<this>;
+        // omit<A extends _StringKey<this>>(keys: A[]): Partial<Omit<this, A>>;
+        // omit<A extends _StringKey<this>>(...keys: A[]): Partial<Omit<this, A>>;
+        // omit(fn: (value: any, key: any, object: any) => any): Partial<this>;
 
         // define a few fixed properties
-        attributes: Record<string, any>;
+        // attributes: Partial<Props>;
         json: string;
-        derived?: Record<keyof Props, any>;
+        derived?: Partial<Props>;
         toTemplate: Record<string, any>;
 
         // Properties
@@ -166,13 +181,13 @@ declare module 'human-model' {
     }
 
     export function define<
-        Spec extends ValidDefinition<Spec>,
-        Model = ModelDefinition<Spec> & HumanModel<ModelDefinition<Spec>>
+        Spec extends ValidDefinition<Spec>
     >
         (spec:
             Spec &
-            ThisType<Model>
-        ): new (attrs?: Attributes, options?: Options) => Model;
+            ThisType<ModelDefinition<Spec>>
+        ): new (attrs?: Attributes, options?: Options) =>
+            ModelDefinition<Spec> & HumanModel<ModelDefinition<Spec>>;
 
     export interface Registry {
         _cache: Record<string, any>;

@@ -1,14 +1,20 @@
+import Storage from './index'
 
-// SCHEMA
-//    jid: 'string',
-//    ver: 'string'
+type RosterVerId = string;
+
+type RosterVer = {
+    jid: RosterVerId;
+    ver: string;
+}
+
+type Cb = ((err: string | Event | null, res?: RosterVer) => void) | null;
 
 class RosterVerStorage {
-    private storage: any;
-    constructor(storage: any) {
+    private storage: Storage;
+    constructor(storage: Storage) {
         this.storage = storage;
     };
-    setup(db) {
+    setup(db: IDBDatabase) {
         if (db.objectStoreNames.contains('rosterver')) {
             db.deleteObjectStore('rosterver');
         }
@@ -16,46 +22,45 @@ class RosterVerStorage {
             keyPath: 'jid'
         });
     };
-    transaction(mode) {
-        var trans = this.storage.db.transaction('rosterver', mode);
+    transaction(mode: IDBTransactionMode) {
+        const trans = this.storage.db.transaction('rosterver', mode);
         return trans.objectStore('rosterver');
     };
-    set(jid, ver, cb) {
-        cb = cb || function () {};
-        var data = {
+    set(jid: RosterVerId, ver: string, cb?: Cb) {
+        cb = cb || function () { };
+        const data = {
             jid: jid,
             ver: ver
         };
-        var request = this.transaction('readwrite').put(data);
+        const request = this.transaction('readwrite').put(data);
         request.onsuccess = function () {
-            cb(false, data);
+            cb!(null, data);
         };
         request.onerror = cb;
     };
-    get(jid, cb) {
-        cb = cb || function () {};
+    get(jid?: RosterVerId, cb?: Cb) {
+        cb = cb || function () { };
         if (!jid) {
-            return cb('not-found');
+            return cb!('not-found');
         }
-        var request = this.transaction('readonly').get(jid);
+        const request = this.transaction('readonly').get(jid);
         request.onsuccess = function (e) {
-            var res = request.result;
+            const res = request.result;
             if (res === undefined) {
-                return cb('not-found');
+                return cb!('not-found');
             }
-            cb(false, request.result);
+            cb!(null, request.result);
         };
         request.onerror = cb;
     };
-    remove(jid, cb) {
-        cb = cb || function () {};
-        var request = this.transaction('readwrite')['delete'](jid);
+    remove(jid: RosterVerId, cb?: Cb) {
+        cb = cb || function () { };
+        const request = this.transaction('readwrite').delete(jid);
         request.onsuccess = function (e) {
-            cb(false, request.result);
+            cb!(null, request.result);
         };
         request.onerror = cb;
     };
 };
-
 
 export default RosterVerStorage;

@@ -14,21 +14,32 @@ declare module 'human-model' {
         'date': Date;
         'number': number;
         'object': object;
+        '$': JQuery;
     };
 
     type ValidPropSimple =
-        keyof PropTypeMapping;
+        (keyof PropTypeMapping) |
+        (new (...args: any) => any);
 
     type ModelPropSimple<T> =
-        T extends keyof PropTypeMapping ? PropTypeMapping[T] | undefined :
+        T extends keyof PropTypeMapping ? PropTypeMapping[T] :
+        T extends new (...args: any) => infer R ? R :
+        never;
+
+    type ModelPropArray<T, E> =
+        T extends 'array' ? ModelPropSimple<E>[] :
         never;
 
     type ValidPropTuple =
-        [keyof PropTypeMapping, boolean?, any?];
+        [ValidPropSimple, boolean, any?, ValidPropSimple?];
 
     type ModelPropTuple<T> =
-        T extends [infer L, true, any?] ? PropTypeMapping[L] :
-        T extends [infer L, false, any?] ? PropTypeMapping[L] | undefined :
+        T extends [infer L, true, any, infer E] ? ModelPropArray<L, E> :
+        T extends [infer L, true, any] ? ModelPropSimple<L> :
+        T extends [infer L, true] ? ModelPropSimple<L> :
+        T extends [infer L, any, any, infer E] ? ModelPropArray<L, E> | undefined :
+        T extends [infer L, any, any] ? ModelPropSimple<L> | undefined :
+        T extends [infer L, any] ? ModelPropSimple<L> | undefined :
         never;
 
     type ModelPropExtra = {
@@ -40,38 +51,29 @@ declare module 'human-model' {
     };
 
     type ValidPropObject =
-        { type: keyof PropTypeMapping, required?: boolean } & ModelPropExtra;
+        { type: ValidPropSimple, required?: boolean } & ModelPropExtra;
 
     type ModelPropObject<T> =
-        T extends { type: infer L, required: true } & ModelPropExtra ? PropTypeMapping[L] :
-        T extends { type: infer L, required?: false } & ModelPropExtra ? PropTypeMapping[L] | undefined :
-        never;
-
-    type ValidPropCtor =
-        new (...args: any) => any;
-
-    type ModelPropCtor<T> =
-        T extends new (...args: any) => infer R ? R :
+        T extends { type: infer L, required: true } & ModelPropExtra ? ModelPropSimple<L> :
+        T extends { type: infer L, required?: false } & ModelPropExtra ? ModelPropSimple<L> | undefined :
         never;
 
     type ValidProp =
         ValidPropSimple |
         ValidPropTuple |
-        ValidPropObject |
-        ValidPropCtor;
+        ValidPropObject;
 
     type ModelProp<T> =
-        T extends ValidPropSimple ? ModelPropSimple<T> :
+        T extends ValidPropSimple ? ModelPropSimple<T> | undefined :
         T extends ValidPropTuple ? ModelPropTuple<T> :
         T extends ValidPropObject ? ModelPropObject<T> :
-        T extends ValidPropCtor ? ModelPropCtor<T> :
         never;
 
     type ValidDerivedProp = {
         deps?: string[];
         cache?: boolean;
         fn: any;
-    };
+    }
 
     type ModelDerivedProp<T> =
         ReturnType<T['fn']>;
@@ -80,7 +82,7 @@ declare module 'human-model' {
         any;
 
     type ModelCollProp<T> =
-        T;
+        InstanceType<T>;
 
     type DefinitionConstraint = {
         props?: any;
@@ -103,14 +105,14 @@ declare module 'human-model' {
         collections?: {
             [K in keyof T['collections']]: ValidCollProp
         };
-    };
+    }
 
-    type ValidDefinition<T extends DefinitionConstraint> =
+    export type ValidDefinition<T extends DefinitionConstraint> =
         ValidDefinitionBase<T> & {
             [K in (Exclude<keyof T, keyof DefinitionConstraint>)]: T[K];
         }
 
-    type ModelDefinition<T extends DefinitionConstraint> =
+    export type ModelDefinition<T extends DefinitionConstraint> =
         {
             [K in keyof T['props']]: ModelProp<T['props'][K]>
         } & {
@@ -123,7 +125,12 @@ declare module 'human-model' {
             [K in (Exclude<keyof T, keyof DefinitionConstraint>)]: T[K];
         }
 
-    export interface HumanModel<Props extends Backbone.ObjectHash = any, SetOptions extends Backbone.ModelSetOptions = any, InitOptions = any> extends Backbone.Model<Props, SetOptions, InitOptions> {
+    export interface HumanModel<
+        Props extends Backbone.ObjectHash = any,
+        SetOptions extends Backbone.ModelSetOptions = any,
+        InitOptions = any,
+    > extends Backbone.Model<Props, SetOptions, InitOptions> {
+
         // inheritable methods to the Model prototype.
         getId(): string | number;
         // initialize(attributes?: Props, options?: Backbone.CombinedModelConstructorOptions<InitOptions, this>): void;
@@ -185,7 +192,7 @@ declare module 'human-model' {
     >
         (spec:
             Spec &
-            ThisType<ModelDefinition<Spec>>
+            ThisType<ModelDefinition<Spec> & HumanModel<ModelDefinition<Spec>>>
         ): new (attrs?: Attributes, options?: Options) =>
             ModelDefinition<Spec> & HumanModel<ModelDefinition<Spec>>;
 

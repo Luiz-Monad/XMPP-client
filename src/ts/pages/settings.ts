@@ -1,18 +1,19 @@
 
+import { MeType } from '../models/me';
 import BasePage from './base';
 import templates from 'templates';
 
-const SettingsPage = BasePage.extend({
+const SettingsPage = BasePage.define<MeType>().extend({
     template: templates.pages.settings,
     classBindings: {
         shouldAskForAlertsPermission: '.enableAlerts',
-        soundEnabledClass: '.soundNotifs'
+        soundEnabledClass: '.soundNotifs',
     },
     srcBindings: {
-        avatar: '#avatarChanger img'
+        avatar: '#avatarChanger img',
     },
     textBindings: {
-        status: '.status'
+        status: '.status',
     },
     events: {
         'click .enableAlerts': 'enableAlerts',
@@ -20,7 +21,7 @@ const SettingsPage = BasePage.extend({
         'dragover': 'handleAvatarChangeDragOver',
         'drop': 'handleAvatarChange',
         'change #uploader': 'handleAvatarChange',
-        'click .disconnect': 'handleDisconnect'
+        'click .disconnect': 'handleDisconnect',
     },
     render: function () {
         this.renderAndBind();
@@ -37,17 +38,17 @@ const SettingsPage = BasePage.extend({
             });
         }
     },
-    handleAvatarChangeDragOver: function (e: Event) {
+    handleAvatarChangeDragOver: function (e: JQuery.Event) {
         e.preventDefault();
         return false;
     },
-    handleAvatarChange: function (e: Event) {
-        var file;
+    handleAvatarChange: function (e: JQuery.ChangeEvent) {
+        let file;
 
         e.preventDefault();
 
-        if (e.dataTransfer) {
-            file = e.dataTransfer.files[0];
+        if ((e as any).dataTransfer) {
+            file = (e as any).dataTransfer.files[0];
         } else if (e.target.files) {
             file = e.target.files[0];
         } else {
@@ -55,19 +56,19 @@ const SettingsPage = BasePage.extend({
         }
 
         if (file.type.match('image.*')) {
-            var fileTracker = new FileReader();
+            const fileTracker = new FileReader();
             fileTracker.onload = function () {
-                me.publishAvatar(this.result);
+                me.publishAvatar(this.result?.toString());
             };
             fileTracker.readAsDataURL(file);
         }
     },
-    handleSoundNotifs: function (e: Event) {
+    handleSoundNotifs: function (e: JQuery.Event) {
         this.model.setSoundNotification(!this.model.soundEnabled);
     },
-    handleDisconnect: function (e: Event) {
+    handleDisconnect: function (e: JQuery.Event) {
         client.disconnect();
-    }
+    },
 });
 
 export default SettingsPage;

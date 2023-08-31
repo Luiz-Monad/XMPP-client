@@ -3,21 +3,25 @@ import HumanModel from 'human-model';
 import getUserMedia from 'getusermedia';
 import Contacts from './contacts';
 import Calls from './calls';
-import Contact from './contact';
+import Contact, { ContactType } from './contact';
 import MUCs from './mucs';
-import MUC from './muc';
 import ContactRequests from './contactRequests';
-import fetchAvatar from '../helpers/fetchAvatar';
+import fetchAvatar, { VCardSource, VCardType } from '../helpers/fetchAvatar';
 import crypto from 'crypto';
-import StanzaIo from 'stanza';
+import resample from 'resampler';
+import unpromisify from '../helpers/unpromisify';
+import { JID } from './jid';
+import { PresenceShow } from 'stanza/Constants';
+import { Presence } from 'stanza/protocol';
 
 const Me = HumanModel.define({
-    initialize: function (opts) {
+    initialize: function (opts?: { avatarID?: string }) {
+        const self = this;
         this.setAvatar(opts ? opts.avatarID : null);
 
         this.bind('change:jid', this.load, this);
         this.bind('change:hasFocus', function () {
-            this.setActiveContact(this._activeContact);
+            self.setActiveContact(self._activeContact);
         }, this);
         this.calls.bind('add remove reset', this.updateActiveCalls, this);
         this.bind('change:avatarID', this.save, this);
@@ -30,8 +34,9 @@ const Me = HumanModel.define({
         app.state.bind('change:deviceIDReady', this.registerDevice, this);
     },
     props: {
-        jid: ['object', true],
+        jid: [JID, true],
         status: 'string',
+        show: 'string',
         avatarID: 'string',
         rosterVer: 'string',
         nick: 'string'
@@ -42,14 +47,14 @@ const Me = HumanModel.define({
         shouldAskForAlertsPermission: ['bool', false, false],
         hasFocus: ['bool', false, false],
         _activeContact: 'string',
-        stream: 'object',
+        stream: MediaStream,
         soundEnabled: ['bool', false, true],
     },
     collections: {
         contacts: Contacts,
         contactRequests: ContactRequests,
         mucs: MUCs,
-        calls: Calls
+        calls: Calls,
     },
     derived: {
         displayName: {
@@ -62,7 +67,7 @@ const Me = HumanModel.define({
             deps: ['stream'],
             fn: function () {
                 if (!this.stream) return '';
-                return URL.createObjectURL(this.stream);
+                return URL.createObjectURL(this.stream as any);
             }
         },
         organization: {
@@ -74,89 +79,97 @@ const Me = HumanModel.define({
         soundEnabledClass: {
             deps: ['soundEnabled'],
             fn: function () {
-                return this.soundEnabled ? "primary" : "secondary";
+                return this.soundEnabled ? 'primary' : 'secondary';
             }
         },
         isAdmin: {
             deps: ['jid'],
             fn: function () {
-               return this.jid.local === SERVER_CONFIG.admin ? 'meIsAdmin' : '';
+                return this.jid.local === SERVER_CONFIG.admin ? 'meIsAdmin' : '';
             }
-        }
+        },
     },
-    setActiveContact: function (jid) {
-        var prev = this.getContact(this._activeContact);
+    setActiveContact: function (jid?: string) {
+        const prev = this.getContact(this._activeContact);
         if (prev) {
             prev.activeContact = false;
         }
-        var curr = this.getContact(jid);
+        const curr = this.getContact(jid);
         if (curr) {
             curr.activeContact = true;
             curr.unreadCount = 0;
-            if ("unreadHlCount" in curr)
+            if ('unreadHlCount' in curr)
                 curr.unreadHlCount = 0;
             this._activeContact = curr.id;
         }
     },
-    getName: function () {
+    getName: function (jid?: string) {
         return this.displayName;
     },
-    getNickname: function () {
-        return this.displayName != this.nick ? this.nick : '';
+    getNickname: function (jid?: string) {
+        return this.displayName !== this.nick ? this.nick : '';
     },
-    getAvatar: function () {
+    getAvatar: function (jid?: string) {
         return this.avatar;
     },
-    setAvatar: function (id, type, source) {
-        var self = this;
+    setAvatar: function (id?: string | null, type?: VCardType, source?: VCardSource) {
+        const self = this;
         fetchAvatar('', id, type, source, function (avatar) {
-            self.avatarID = avatar.id;
-            self.avatar = avatar.uri;
+            self.avatarID = avatar?.id;
+            self.avatar = avatar?.uri;
         });
     },
-    publishAvatar: function (data) {
+    publishAvatar: function (data?: string) {
         if (!data) data = this.avatar;
-        if (!data || data.indexOf('https://') != -1) return;
+        if (!data || data.indexOf('https://') !== -1) return;
 
-        var resampler = new Resample(data, 80, 80, function (data) {
-            var b64Data = data.split(',')[1];
-            var id = crypto.createHash('sha1').update(atob(b64Data)).digest('hex');
-            app.storage.avatars.add({id: id, uri: data});
-            client.publishAvatar(id, b64Data, function (err, res) {
+        resample(data, 80, 80, function (data) {
+            const b64 = data.split(',');
+            const b64Type = b64[0];
+            const b64Data = Buffer.from(b64[1], 'base64');
+            const id = crypto.createHash('sha1').update(b64Data).digest('hex');
+            app.storage.avatars.add({ id: id, type: b64Type, uri: data });
+            unpromisify(client.publishAvatar)(id, b64Data, function (err, res) {
                 if (err) return;
                 client.useAvatars([{
-                  id: id,
-                  width: 80,
-                  height: 80,
-                  type: 'image/png',
-                  bytes: b64Data.length
+                    id: id,
+                    width: 80,
+                    height: 80,
+                    mediaType: 'image/png',
+                    bytes: b64Data.length
                 }]);
             });
         });
     },
-    setSoundNotification: function(enable) {
+    setSoundNotification: function (enable: boolean) {
         this.soundEnabled = enable;
     },
-    getContact: function (jid, alt) {
+    getContact: function (jid?: string | JID, alt?: string) {
+        let _jid: JID | undefined | null = null
+        let _alt: JID | undefined | null = null
+
         if (typeof jid === 'string') {
-            if (SERVER_CONFIG.domain && jid.indexOf('@') == -1) jid += '@' + SERVER_CONFIG.domain;
-            jid = new StanzaIo.JID(jid);
+            if (SERVER_CONFIG.domain && jid.indexOf('@') === -1) jid += '@' + SERVER_CONFIG.domain;
+            _jid = JID.parse(jid);
+        } else
+            _jid = jid;
+        if (typeof alt === 'string')
+            _alt = JID.parse(alt);
+        else
+            _alt = alt;
+
+        if (this.isMe(_jid)) {
+            _jid = _alt || _jid;
         }
-        if (typeof alt === 'string') alt = new StanzaIo.JID(alt);
 
-        if (this.isMe(jid)) {
-            jid = alt || jid;
-        }
+        if (!_jid) return;
 
-        if (!jid) return;
-
-        return this.contacts.get(jid.bare) ||
-            this.mucs.get(jid.bare) ||
-            this.calls.findWhere('jid', jid);
+        return this.contacts.get(_jid.bare) ||
+            this.mucs.get(_jid.bare) ||
+            this.calls.findWhere({ contact: { jid: _jid } });
     },
-    setContact: function (data, create) {
-        var contact = this.getContact(data.jid);
-        data.jid = data.jid.bare;
+    setContact: function (data: Partial<ContactType>, create?: boolean) {
+        let contact = this.getContact(data.jid);
 
         if (contact) {
             contact.set(data);
@@ -169,10 +182,11 @@ const Me = HumanModel.define({
             this.contacts.add(contact);
         }
     },
-    removeContact: function (jid) {
-        var self = this;
-        client.removeRosterItem(jid, function(err, res) {
-            var contact = self.getContact(jid);
+    removeContact: function (jid: string) {
+        const self = this;
+        unpromisify(client.removeRosterItem)(jid, function (err, res) {
+            const contact = self.getContact(jid);
+            if (!contact) return;
             self.contacts.remove(contact.jid);
             app.storage.roster.remove(contact.storageId);
         });
@@ -180,25 +194,25 @@ const Me = HumanModel.define({
     load: function () {
         if (!this.jid.bare) return;
 
-        var self = this;
+        const self = this;
 
-        app.storage.profiles.get(this.jid.bare, function (err: any, profile: { status: any; avatarID: any; soundEnabled: any; }) {
+        app.storage.profiles.get(this.jid.bare, function (err, profile) {
             if (!err) {
                 self.nick = self.jid.local;
-                self.status = profile.status;
-                self.avatarID = profile.avatarID;
-                self.soundEnabled = profile.soundEnabled;
+                self.status = profile?.status;
+                self.avatarID = profile?.avatarID;
+                self.soundEnabled = profile?.soundEnabled;
             }
             self.save();
             app.storage.roster.getAll(self.jid.bare, function (err, contacts) {
-                if (err) return;
+                if (err || !contacts) return;
 
-                contacts.forEach(function (contact) {
-                    contact = new Contact(contact);
+                contacts.forEach(function (ncontact) {
+                    const contact = new Contact(ncontact);
                     contact.owner = self.jid.bare;
                     contact.inRoster = true;
-                    if (contact.jid.indexOf("@" + SERVER_CONFIG.domain) > -1)
-                      contact.persistent = true;
+                    if (contact.jid.indexOf('@' + SERVER_CONFIG.domain) > -1)
+                        contact.persistent = true;
                     contact.save();
                     self.contacts.add(contact);
                 });
@@ -209,10 +223,13 @@ const Me = HumanModel.define({
             self.contacts.trigger('loaded');
         });
     },
-    isMe: function (jid) {
+    isMe: function (jid?: string | JID | null) {
+        if (typeof jid === 'string') {
+            jid = JID.parse(jid);
+        }
         return jid && (jid.bare === this.jid.bare);
     },
-    updateJid: function(newJid) {
+    updateJid: function (newJid: JID) {
         if (this.jid.domain && this.isMe(newJid)) {
             this.jid.full = newJid.full;
             this.jid.resource = newJid.resource;
@@ -224,28 +241,28 @@ const Me = HumanModel.define({
         }
     },
     updateIdlePresence: function () {
-        var update = {
+        const update: Presence = {
             status: this.status,
-            show: this.show,
-            caps: app.api.disco.caps
+            show: this.show as PresenceShow,
+            legacyCapabilities: Object.values(client.disco.caps),
         };
 
         if (!app.state.active) {
-            update.idle = {since: app.state.idleSince};
+            update.idleSince = app.state.idleSince;
         }
 
-        app.api.sendPresence(update);
+        client.sendPresence(update);
     },
     updateUnreadCount: function () {
-        var sum = function (a, b) {
+        const sum = function (a: number, b: number) {
             return a + b;
         };
 
-        var pmCount = this.contacts.pluck('unreadCount')
+        let pmCount = this.contacts.pluck('unreadCount')
             .reduce(sum);
         pmCount = pmCount ? pmCount + ' • ' : '';
 
-        var hlCount = this.mucs.pluck('unreadHlCount')
+        let hlCount = this.mucs.pluck('unreadHlCount')
             .reduce(sum);
         hlCount = hlCount ? 'H' + hlCount + ' • ' : '';
 
@@ -255,7 +272,7 @@ const Me = HumanModel.define({
         app.state.hasActiveCall = !!this.calls.length;
     },
     save: function () {
-        var data = {
+        const data = {
             jid: this.jid.bare,
             avatarID: this.avatarID,
             status: this.status,
@@ -265,7 +282,7 @@ const Me = HumanModel.define({
         app.storage.profiles.set(data);
     },
     cameraOn: function () {
-        var self = this;
+        const self = this;
         getUserMedia(function (err, stream) {
             if (err) {
                 console.error(err);
@@ -276,20 +293,19 @@ const Me = HumanModel.define({
     },
     cameraOff: function () {
         if (this.stream) {
-            this.stream.stop();
-            this.stream = null;
+            const tracks = this.stream.getTracks();
+            tracks.forEach(track => track.stop());
+            delete this.stream;
         }
     },
     registerDevice: function () {
-        var deviceID = app.state.deviceID;
+        const deviceID = app.state.deviceID;
         if (!!deviceID && deviceID !== undefined && deviceID !== 'undefined') {
-            client.otalkRegister(deviceID).then(function () {
-                client.registerPush('push@push.otalk.im/prod');
-            }).catch(function (err) {
-                console.log('Could not enable push notifications');
+            client.otalkRegister(deviceID, function () {
+                client.registerPushService('push@push.otalk.im/prod', () => { });
             });
         }
-    }
+    },
 });
 
 export default Me;

@@ -1,199 +1,202 @@
-'use strict';
 
 import _ from 'lodash';
 
 import Backbone from 'backbone';
 import asyncjs from 'async';
 import StanzaIO from 'stanza';
+import Notify from 'notify.js';
+import url from 'url';
+import SoundEffectManager from 'sound-effect-manager';
 
-import AppState from './models/state';
-import MeModel from './models/me';
+import { Profile } from './storage/profile';
+import State, { StateType } from './models/state';
+import Me, { MeType } from './models/me';
+import BasePage, { BasePageType } from './pages/base';
 import MainView from './views/main';
 import Router from './router';
 import AppStorage from './storage';
 import xmppEventHandlers from './helpers/xmppEventHandlers';
 import pushNotifications from './helpers/pushNotifications';
-import Notify from 'notify.js';
-import url from 'url';
-
-import SoundEffectManager from 'sound-effect-manager';
+import unpromisify from './helpers/unpromisify';
+import HumanView from 'human-view';
 
 export class App {
-    config: any
-    notifications: typeof Notify
-    soundManager: typeof SoundEffectManager
-    storage: typeof AppStorage
-    composing: any
-    timeInterval: any
-    mucInfos: any
+    config: any;
+    notifications: Notify = <Notify>{};
+    soundManager: typeof SoundEffectManager;
+    storage: AppStorage = <AppStorage>{};
+    composing: Record<string, string> = {};
+    timeInterval: number = 0;
 
-    state: typeof AppState
+    currentPage: BasePageType = <BasePageType>{};
+    state: StateType = <StateType>{};
+    history: Backbone.History = <Backbone.History>{};
 
-    view: any
-    api: typeof 
-    id: any
-    timeInterval: any
+    id: any;
 
     launch() {
         function parseConfig(json: string) {
-            var config = JSON.parse(json)
-            var credentials = config.credentials
-            if (!credentials) return config
+            const config = JSON.parse(json);
+            const credentials = config.credentials;
+            if (!credentials) return config;
 
-            for (var property in credentials) {
-                if (!credentials.hasOwnProperty(property)) continue
+            for (const property in credentials) {
+                if (!credentials.hasOwnProperty(property)) continue;
 
-                var value = credentials[property]
+                const value = credentials[property];
                 if (value.type === 'Buffer') {
-                    credentials[property] = new Buffer(value)
+                    credentials[property] = new Buffer(value);
                 }
             }
 
-            return config
+            return config;
         }
 
-        var self = window['app'] = this
-        var config = localStorage['config']
+        const self = window['app'] = this;
+        const config = localStorage['config'];
 
         if (!config) {
-            console.log('missing config')
-            window.location = <any>'login.html'
-            return
+            console.log('missing config');
+            app.whenDisconnected();
+            return;
         }
 
-        app.config = parseConfig(config)
-        app.config.useStreamManagement = false // Temporary solution because this feature is bugged on node 4.0
+        app.config = parseConfig(config);
+        app.config.useStreamManagement = false; // Temporary solution because this feature is bugged on node 4.0
 
         if (SERVER_CONFIG.sasl) {
-            app.config.sasl = SERVER_CONFIG.sasl
+            app.config.sasl = SERVER_CONFIG.sasl;
         }
 
-        _.extend(this, Backbone.Events)
+        _.extend(this, Backbone.Events);
 
-        var profile = {}
+        let profile: Profile = {} as Profile;
         asyncjs.series([
             function (cb) {
-                app.notifications = new Notify()
-                app.soundManager = new SoundEffectManager()
-                app.storage = new AppStorage()
-                app.storage.open(cb)
-                app.composing = {}
-                app.timeInterval = 0
-                app.mucInfos = []
+                app.notifications = new Notify();
+                app.soundManager = new SoundEffectManager();
+                app.storage = new AppStorage();
+                app.storage.open(cb);
+                app.composing = {};
+                app.timeInterval = 0;
             },
             function (cb) {
                 app.storage.profiles.get(app.config.jid, function (err, res) {
                     if (res) {
-                        profile = res
-                        profile['jid'] = {full: app.config.jid, bare: app.config.jid}
-                        app.config.rosterVer = res.rosterVer
+                        profile = res;
+                        profile.jid = app.config.jid;
+                        app.config.rosterVer = res.rosterVer;
                     }
-                    cb()
+                    cb();
                 })
             },
             function (cb) {
-                app.state = new AppState()
-                app.me = window['me'] = new MeModel(profile)
+                app.state = new State();
+                me = window['me'] = new Me(profile);
 
                 window.onbeforeunload = function () {
-                    if (app.api.sessionStarted) {
-                        app.api.disconnect()
+                    if (client.sessionStarted) {
+                        client.disconnect();
                     }
-                }
+                };
 
-                self.api = window['client'] = StanzaIO.createClient(app.config)
-                client.use(pushNotifications)
-                xmppEventHandlers(self.api, self)
+                client = window['client'] = StanzaIO.createClient(app.config);
+                client.use(pushNotifications);
+                xmppEventHandlers(client, self);
 
-                self.api.once('session:started', function () {
-                    app.state.hasConnected = true
-                    cb()
+                client.once('session:started', function () {
+                    app.state.hasConnected = true;
+                    cb();
                 })
-                self.api.connect()
+                client.connect();
             },
             function (cb) {
-                app.soundManager.loadFile('sounds/ding.wav', 'ding')
-                app.soundManager.loadFile('sounds/threetone-alert.wav', 'threetone-alert')
-                cb()
+                app.soundManager.loadFile('sounds/ding.wav', 'ding');
+                app.soundManager.loadFile('sounds/threetone-alert.wav', 'threetone-alert');
+                cb();
             },
             function (cb) {
                 app.whenConnected(function () {
                     function getInterval() {
                         if (client.sessionStarted) {
-                            client.getTime(self.id, function (err, res) {
-                                if (err) return
-                                self.timeInterval = res.time.utc - Date.now()
+                            unpromisify(client.getTime)(self.id, function (err, res) {
+                                if (err) return;
+                                self.timeInterval = (res.utc?.getMilliseconds() ?? 0) - Date.now();
                             })
-                            setTimeout(getInterval, 600000)
+                            setTimeout(getInterval, 600000);
                         }
                     }
-                    getInterval()
-                })
-                cb()
+                    getInterval();
+                });
+                cb();
             },
             function (cb) {
                 app.whenConnected(function () {
-                    me.publishAvatar()
-                })
+                    me.publishAvatar();
+                });
 
                 function start() {
                     // start our router and show the appropriate page
-                    var baseUrl = url.parse(SERVER_CONFIG.baseUrl) 
-                    app.history.start({pushState: false, root: baseUrl.pathname})
-                    if (app.history.fragment == '' && SERVER_CONFIG.startup)
+                    const baseUrl = url.parse(SERVER_CONFIG.baseUrl)
+                    app.history.start({ pushState: false, root: baseUrl.pathname! })
+                    if ('fragment' in app.history && app.history.fragment === '' && SERVER_CONFIG.startup)
                         app.navigate(SERVER_CONFIG.startup)
                     cb()
-                }
+                };
 
-                new Router()
-                app.history = Backbone.history
-                app.history.on("route", function(route, params) {
-                    app.state.pageChanged = params
-                })
+                new Router();
+                app.history = Backbone.history;
+                app.history.on('route', function (route, params) {
+                    app.state.pageChanged = params;
+                });
 
-                self.view = new MainView({
+                const view = new MainView({
                     model: app.state,
-                    el: document.body
-                })
-                self.view.render()
+                    el: document.body,
+                });
+                view.render();
 
                 if (me.contacts.length) {
-                    start()
+                    start();
                 } else {
-                    me.contacts.once('loaded', start)
+                    me.contacts.once('loaded', start);
                 }
             }
         ])
     }
-    whenConnected(func) {
-        if (app.api.sessionStarted) {
-            func()
+    whenConnected(func: ((_?: unknown) => void)) {
+        if (client.sessionStarted) {
+            func();
         } else {
-            app.api.once('session:started', func)
+            client.once('session:started', func);
         }
     }
-    navigate(page) {
-        var url = (page.charAt(0) === '/') ? page.slice(1) : page
-        app.state.markActive()
-        app.history.navigate(url, true)
+    whenDisconnected() {
+        window.location.href = 'login.html';
     }
-    renderPage(view, animation) {
-        var container = $('#pages')
+    navigate(page: string) {
+        const url = (page.charAt(0) === '/') ? page.slice(1) : page;
+        app.state.markActive();
+        app.history.navigate(url, true);
+    }
+    renderPage(view: HumanView.HumanView<any>, animation?: unknown) {
+        const container = $('#pages');
 
         if (app.currentPage) {
-            app.currentPage.hide(animation)
+            app.currentPage.hide(animation);
         }
         // we call render, but if animation is none, we want to tell the view
         // to start with the active class already before appending to DOM.
-        container.append(view.render(animation === 'none').el)
-        view.show(animation)
+        ///animation === 'none'
+        container.append(view.render().el);
+        (view as BasePageType).show(animation);
     }
     serverConfig() {
-        return SERVER_CONFIG
-    }    
-} 
-app = new App()
+        return SERVER_CONFIG;
+    }
+}
+app = new App();
 
-$(()=> app.launch())
+$(() => app.launch());
 
-export default app
+export default app;

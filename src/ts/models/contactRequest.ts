@@ -1,7 +1,6 @@
 
 import HumanModel from 'human-model';
 
-
 const ContactRequest = HumanModel.define({
     type: 'contactRequest',
     props: {

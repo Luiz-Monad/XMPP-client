@@ -1,48 +1,55 @@
 
 import _ from 'underscore';
 import async from 'async';
-import crypto from 'crypto';
 import bows from 'bows';
-import uuid from 'node-uuid';
-import HumanModel from 'human-model';
 import Contact from '../models/contact';
 import Resource from '../models/resource';
-import Message from '../models/message';
+import Message, { idLookup } from '../models/message';
 import Call from '../models/call';
-import StanzaIo from 'stanza';
+import StanzaIO, { AgentEvents } from 'stanza';
+import unpromisify from './unpromisify';
+import { JID } from '../models/jid';
+import { App } from '../app';
 
 const log = bows('Otalk');
 const ioLogIn = bows('<< in');
 const ioLogOut = bows('>> out');
 
-const discoCapsQueue = async.queue(function (pres, cb) {
-    var jid = pres.from;
-    var caps = pres.caps;
+declare module 'stanza' {
 
-    log.info('Checking storage for ' + caps.ver);
-
-    var contact = me.getContact(jid);
-    var resource = null;
-    if (contact) {
-        resource = contact.resources.get(jid);
+    export interface Agent {
+        call(jid: string): void;
+        acceptCall(sid: string): void;
+        declineCall(sid: string): void;
+        endCall(sid: string, reason: 'decline' | 'cancel' | 'success'): void;
     }
 
-    app.storage.disco.get(caps.ver, function (err, existing) {
+}
+
+const discoCapsQueue = async.queue(function (pres: AgentEvents['disco:caps'], cb: () => void) {
+    const jid = pres.jid;
+    const caps = pres.caps;
+
+    log.info('Checking storage for caps');
+
+    const contact = me.getContact(jid);
+    const resource = contact ? contact.resources.get(jid) : null;
+
+    app.storage.disco.get(function (err, existing) {
         if (existing) {
             log.info('Already found info for ' + caps.ver);
             if (resource) resource.discoInfo = existing;
             return cb();
         }
         log.info('getting info for ' + caps.ver + ' from ' + jid);
-        client.getDiscoInfo(jid, caps.node + '#' + caps.ver, function (err, result) {
+        unpromisify(client.getDiscoInfo)(jid, caps.node + '#' + caps.ver, function (err, result) {
             if (err || !result.discoInfo.features) {
                 log.info('Couldnt get info for ' + caps.ver);
                 return cb();
             }
             if (client.verifyVerString(result.discoInfo, caps.hash, caps.ver)) {
                 log.info('Saving info for ' + caps.ver);
-                var data = result.discoInfo;
-                app.storage.disco.add(caps.ver, data, function () {
+                app.storage.disco.add(caps, function () {
                     if (resource) resource.discoInfo = data;
                     cb();
                 });
@@ -55,7 +62,7 @@ const discoCapsQueue = async.queue(function (pres, cb) {
 });
 
 
-export default function (client, app) {
+export default function (client: StanzaIO.Agent, app: App) {
 
     client.on('*', function (name, data) {
         if (name === 'raw:incoming') {
@@ -101,14 +108,14 @@ export default function (client, app) {
             console.error(err);
         }
         if (!app.state.hasConnected) {
-            window.location = 'login.html';
+            app.whenDisconnected();
         }
     });
 
     client.on('auth:failed', function () {
         log.warn('auth failed');
         localStorage.authFailed = true;
-        window.location = 'login.html';
+        app.whenDisconnected();
     });
 
     client.on('stream:management:resumed', function () {
@@ -116,48 +123,51 @@ export default function (client, app) {
     });
 
     client.on('session:started', function (jid) {
-        me.updateJid(jid);
+        if (!jid) return;
+        me.updateJid(JID.parse(jid));
 
         app.state.connected = true;
         window.readyForDeviceID = true;
 
-        client.getRoster(function (err, resp) {
-            if (resp.roster && resp.roster.items && resp.roster.items.length) {
+        unpromisify(client.getRoster)(function (err, resp) {
+            if (resp && resp.items && resp.items.length) {
                 app.storage.roster.clear(function () {
                     me.contacts.reset();
-                    me.rosterVer = resp.roster.ver;
+                    me.rosterVer = resp.version;
 
-                    _.each(resp.roster.items, function (item) {
+                    resp.items.forEach(function (item) {
                         me.setContact(item, true);
                     });
                 });
             }
 
-            var caps = client.updateCaps();
-            app.storage.disco.add(caps.ver, caps.discoInfo, function () {
-                client.sendPresence({
-                    status: me.status,
-                    caps: client.disco.caps
+            const caps = client.updateCaps();
+            if (caps) {
+                app.storage.disco.add(caps, function () {
+                    client.sendPresence({
+                        status: me.status,
+                        legacyCapabilities: Object.values(client.disco.caps),
+                    });
+                    client.enableCarbons();
                 });
-                client.enableCarbons();
-            });
+            }
 
             me.mucs.fetch();
         });
 
-        var keepalive = SERVER_CONFIG.keepalive;
+        const keepalive = SERVER_CONFIG.keepalive;
         if (keepalive) {
             client.enableKeepAlive(keepalive);
         }
     });
 
     client.on('roster:update', function (iq) {
-        var items = iq.roster.items;
+        const items = iq.roster.items;
 
-        me.rosterVer = iq.roster.ver;
+        me.rosterVer = iq.roster.version;
 
-        _.each(items, function (item) {
-            var contact = me.getContact(item.jid);
+        items?.forEach(function (item) {
+            const contact = me.getContact(item.jid);
 
             if (item.subscription === 'remove') {
                 if (contact) {
@@ -172,12 +182,12 @@ export default function (client, app) {
 
     client.on('subscribe', function (pres) {
         me.contactRequests.add({
-            jid: pres.from.bare
+            jid: pres.from
         });
     });
 
     client.on('available', function (pres) {
-        var contact = me.getContact(pres.from);
+        const contact = me.getContact(pres.from);
         if (contact) {
             delete pres.id;
             pres.show = pres.show || '';
@@ -185,7 +195,7 @@ export default function (client, app) {
             pres.priority = pres.priority || 0;
 
 
-            var resource = contact.resources.get(pres.from);
+            const resource = contact.resources.get(pres.from);
             if (resource) {
                 pres.from = pres.from.full;
                 // Explicitly set idleSince to null to clear
@@ -205,7 +215,7 @@ export default function (client, app) {
                 resource.fetchTimezone();
             }
 
-            var muc = pres.muc || {};
+            const muc = pres.muc || {};
             if (muc.codes && muc.codes.indexOf('110') >= 0) {
                 contact.joined = true;
             }
@@ -213,9 +223,9 @@ export default function (client, app) {
     });
 
     client.on('unavailable', function (pres) {
-        var contact = me.getContact(pres.from);
+        const contact = me.getContact(pres.from);
         if (contact) {
-            var resource = contact.resources.get(pres.from.full);
+            const resource = contact.resources.get(pres.from);
             if (resource) {
                 if (resource.id === contact.lockedResource) {
                     contact.lockedResource = '';
@@ -227,15 +237,15 @@ export default function (client, app) {
                 contact.resources.remove(resource);
             }
 
-            var muc = pres.muc || {};
-            if (muc.codes && muc.codes.indexOf('110') >= 0) {
+            const muc = pres.muc || {};
+            if (muc.type === 'info' && muc.codes && muc.codes.indexOf('110') >= 0) {
                 contact.joined = false;
             }
         }
     });
 
     client.on('avatar', function (info) {
-        var contact = me.getContact(info.jid);
+        let contact = me.getContact(info.jid);
         if (!contact) {
             if (me.isMe(info.jid)) {
                 contact = me;
@@ -244,15 +254,15 @@ export default function (client, app) {
             }
         }
 
-        var id = '';
-        var type = 'image/png';
+        let id = '';
+        let type = 'image/png';
         if (info.avatars.length > 0) {
             id = info.avatars[0].id;
-            type = info.avatars[0].type || 'image/png';
+            type = info.avatars[0].mediaType || 'image/png';
         }
 
         if (contact.type === 'muc') {
-            var resource = contact.resources.get(info.jid.full);
+            const resource = contact.resources.get(info.jid.full);
             if (resource) {
                 resource.setAvatar(id, type, info.source);
             }
@@ -264,9 +274,9 @@ export default function (client, app) {
     });
 
     client.on('chatState', function (info) {
-        var contact = me.getContact(info.from);
+        const contact = me.getContact(info.from);
         if (contact) {
-            var resource = contact.resources.get(info.from.full);
+            const resource = contact.resources.get(info.from.full);
             if (resource) {
                 resource.chatState = info.chatState;
                 if (info.chatState === 'gone') {
@@ -286,12 +296,13 @@ export default function (client, app) {
     });
 
     client.on('chat', function (msg) {
-        msg.mid = msg.id;
+        const mid = msg.id;
         delete msg.id;
 
-        var contact = me.getContact(msg.from, msg.to);
+        const contact = me.getContact(msg.from, msg.to);
         if (contact && !msg.replace) {
-            var message = new Message(msg);
+            const message = new Message(msg);
+            message.mid = mid;
 
             if (msg.archived) {
                 msg.archived.forEach(function (archived) {
@@ -305,8 +316,8 @@ export default function (client, app) {
                 msg.delay.stamp = new Date(Date.now() + app.timeInterval);
 
             message.acked = true;
-            var localTime = new Date(Date.now() + app.timeInterval);
-            var notify = Math.round((localTime - message.created) / 1000) < 5;
+            const localTime = new Date(Date.now() + app.timeInterval);
+            const notify = Math.round((localTime - message.created) / 1000) < 5;
             contact.addMessage(message, notify);
             if (msg.from.bare == contact.jid.bare) {
                 contact.lockedResource = msg.from.full;
@@ -318,31 +329,32 @@ export default function (client, app) {
         msg.mid = msg.id;
         delete msg.id;
 
-        var contact = me.getContact(msg.from, msg.to);
+        const contact = me.getContact(msg.from, msg.to);
         if (contact && !msg.replace) {
-            var message = new Message(msg);
+            const message = new Message(msg);
             message.acked = true;
-            var localTime = new Date(Date.now() + app.timeInterval);
-            var notify = Math.round((localTime - message.created) / 1000) < 5;
+            const localTime = new Date(Date.now() + app.timeInterval);
+            const notify = Math.round((localTime - message.created) / 1000) < 5;
             contact.addMessage(message, notify);
         }
     });
 
     client.on('muc:subject', function (msg) {
-        var contact = me.getContact(msg.from, msg.to);
+        const contact = me.getContact(msg.from, msg.to);
         if (contact) {
             contact.subject = msg.subject === 'true' ? '' : msg.subject;
         }
     });
 
     client.on('replace', function (msg) {
-        msg.mid = msg.id;
+        const mid = msg.id;
         delete msg.id;
 
-        var contact = me.getContact(msg.from, msg.to);
+        const contact = me.getContact(msg.from, msg.to);
         if (!contact) return;
 
-        var original = Message.idLookup(msg.from[msg.type === 'groupchat' ? 'full' : 'bare'], msg.replace);
+        const original = idLookup(msg.from, msg.replace);
+        original.mid = mid;
 
         if (!original) return;
 
@@ -350,10 +362,10 @@ export default function (client, app) {
     });
 
     client.on('receipt', function (msg) {
-        var contact = me.getContact(msg.from, msg.to);
+        const contact = me.getContact(msg.from, msg.to);
         if (!contact) return;
 
-        var original = Message.idLookup(msg.to[msg.type === 'groupchat' ? 'full' : 'bare'], msg.receipt);
+        const original = idLookup(msg.to, msg.receipt);
 
         if (!original) return;
 
@@ -369,17 +381,15 @@ export default function (client, app) {
     });
 
     client.on('disco:caps', function (pres) {
-        if (pres.caps.hash) {
-            log.info('Caps from ' + pres.from + ' ver: ' + pres.caps.ver);
-            discoCapsQueue.push(pres);
-        }
+        log.info('Caps from ' + pres.jid);
+        discoCapsQueue.push(pres);
     });
 
     client.on('stanza:acked', function (stanza) {
-        if (stanza.body) {
-            var contact = me.getContact(stanza.to, stanza.from);
+        if (stanza.kind === 'message') {
+            const contact = me.getContact(stanza.stanza.to, stanza.stanza.from);
             if (contact) {
-                var msg = Message.idLookup(me.jid.bare, stanza.id);
+                const msg = idLookup(me.jid.bare, stanza.stanza.id);
                 if (msg) {
                     msg.acked = true;
                 }
@@ -388,14 +398,17 @@ export default function (client, app) {
     });
 
     client.on('jingle:incoming', function (session) {
-        var contact = me.getContact(session.peer);
+        session.addStream(localMedia.localStream);
+        session.accept();
+
+        let contact = me.getContact(session.peerID);
         if (!contact) {
-            contact = new Contact({ jid: new StanzaIo.JID(session.peer).bare });
-            contact.resources.add({id: session.peer});
+            contact = new Contact({ jid: JID.parse(session.peerID).bare });
+            contact.resources.add({ id: session.peerID });
             me.contacts.add(contact);
         }
 
-        var call = new Call({
+        const call = new Call({
             contact: contact,
             state: 'incoming',
             jingleSession: session
@@ -407,8 +420,9 @@ export default function (client, app) {
     });
 
     client.on('jingle:outgoing', function (session) {
-        var contact = me.getContact(session.peer);
-        var call = new Call({
+        const contact = me.getContact(session.peerID);
+        if (!contact) return;
+        const call = new Call({
             contact: contact,
             state: 'outgoing',
             jingleSession: session
@@ -418,18 +432,19 @@ export default function (client, app) {
     });
 
     client.on('jingle:terminated', function (session) {
-        var contact = me.getContact(session.peer);
+        const contact = me.getContact(session.peerID);
+        if (!contact) return;
         contact.callState = '';
         contact.jingleCall = null;
         contact.onCall = false;
         if (me.calls.length == 1) { // this is the last call
-            client.jingle.stopLocalMedia();
-            client.jingle.localStream = null;
+            client.stopLocalMedia();
         }
     });
 
     client.on('jingle:accepted', function (session) {
-        var contact = me.getContact(session.peer);
+        const contact = me.getContact(session.peerID);
+        if (!contact) return;
         contact.callState = 'activeCall';
         contact.onCall = true;
     });
@@ -443,21 +458,25 @@ export default function (client, app) {
     });
 
     client.on('jingle:remotestream:added', function (session) {
-        var contact = me.getContact(session.peer);
+        const contact = me.getContact(session.peer);
         if (!contact) {
-            contact.resources.add({id: session.peer});
+            contact.resources.add({ id: session.peer });
             me.contacts.add(contact);
         }
         contact.stream = session.streams[0];
     });
 
     client.on('jingle:remotestream:removed', function (session) {
-        var contact = me.getContact(session.peer);
+        const contact = me.getContact(session.peerID);
+        if (!contact) return;
         contact.stream = null;
     });
 
     client.on('jingle:ringing', function (session) {
-        var contact = me.getContact(session.peer);
+        const contact = me.getContact(session.peerID);
+        if (!contact) return;
         contact.callState = 'ringing';
     });
+
+    localMedia.start();
 };

@@ -3,23 +3,22 @@ import async from 'async';
 import BaseCollection from './baseCollection';
 import Contact, { ContactType } from './contact';
 
-
-module.exports = BaseCollection.extend({
+const Contacts = BaseCollection.extend({
     type: 'contacts',
     model: Contact,
     comparator: function (model1: ContactType, model2: ContactType) {
-        var show1 = model1.show;
-        var show2 = model2.show;
+        const show1 = model1.show;
+        const show2 = model2.show;
 
-        var name1 = model1.displayName.toLowerCase();
-        var name2 = model2.displayName.toLowerCase();
+        const name1 = model1.displayName?.toLowerCase();
+        const name2 = model2.displayName?.toLowerCase();
 
         if (show1 === show2) {
 
             if (name1 === name2) {
                 return 0;
             }
-            if (name1 < name2) {
+            if (name1 && name2 && name1 < name2) {
                 return -1;
             }
             return 1;
@@ -34,14 +33,17 @@ module.exports = BaseCollection.extend({
             if (name1 === name2) {
                 return 0;
             }
-            if (name1 < name2) {
+            if (name1 && name2 && name1 < name2) {
                 return -1;
             }
 
             return 1;
         }
     },
-    initialize: function (model: ContactType[], options: unknown) {
+    initialize: function (model: unknown, options: unknown) {
         this.bind('change', this.sort, this);
-    }
+    },
 });
+
+export default Contacts;
+export type ContactsType = InstanceType<typeof Contacts>;

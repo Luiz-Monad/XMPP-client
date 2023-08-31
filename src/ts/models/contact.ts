@@ -1,17 +1,17 @@
 
 import _ from 'underscore';
 import crypto from 'crypto';
-import async from 'async';
-import uuid from 'node-uuid';
 import HumanModel from 'human-model';
 import Resources from './resources';
 import Messages from './messages';
-import Message from './message';
+import Message, { MessageType, idLookup } from './message';
 import logger from 'andlog';
-import fetchAvatar from '../helpers/fetchAvatar';
+import fetchAvatar, { VCardSource, VCardType } from '../helpers/fetchAvatar';
+import unpromisify from '../helpers/unpromisify';
+import Call from './call';
 
 const Contact = HumanModel.define({
-    initialize: function (attrs) {
+    initialize: function (attrs: { jid?: string; avatarID: string }) {
         if (attrs.jid) {
             this.id = attrs.jid;
         }
@@ -24,7 +24,7 @@ const Contact = HumanModel.define({
 
         this.fetchHistory(true);
 
-        var self = this;
+        const self = this;
         client.on('session:started', function () {
             if (self.messages.length)
                 self.fetchHistory(true, true);
@@ -34,13 +34,13 @@ const Contact = HumanModel.define({
     props: {
         id: ['string', true, false],
         avatarID: ['string', false, ''],
-        groups: ['array', false, []],
+        groups: ['array', false, [], 'string'],
         inRoster: ['bool', true, false],
         jid: ['string', true],
         name: ['string', false, ''],
         owner: ['string', true, ''],
         storageId: ['string', true, ''],
-        subscription: ['string', false, 'none']
+        subscription: ['string', false, 'none'],
     },
     session: {
         activeContact: ['bool', false, false],
@@ -48,7 +48,7 @@ const Contact = HumanModel.define({
         avatarSource: 'string',
         lastInteraction: 'date',
         lastHistoryFetch: 'date',
-        lastSentMessage: 'object',
+        lastSentMessage: Message,
         lockedResource: 'string',
         offlineStatus: ['string', false, ''],
         topResource: 'string',
@@ -56,7 +56,9 @@ const Contact = HumanModel.define({
         _forceUpdate: ['number', false, 0],
         onCall: ['boolean', false, false],
         persistent: ['bool', false, false],
-        stream: 'object'
+        stream: MediaStream,
+        callState: 'string',
+        jingleCall: Call,
     },
     derived: {
         streamUrl: {
@@ -64,7 +66,7 @@ const Contact = HumanModel.define({
             cache: true,
             fn: function () {
                 if (!this.stream) return '';
-                return URL.createObjectURL(this.stream);
+                return URL.createObjectURL(this.stream as any);
             }
         },
         displayName: {
@@ -76,7 +78,7 @@ const Contact = HumanModel.define({
         displayUnreadCount: {
             deps: ['unreadCount'],
             fn: function () {
-                if (this.unreadCount > 0) {
+                if (this.unreadCount && this.unreadCount > 0) {
                     return this.unreadCount.toString();
                 }
                 return '';
@@ -87,33 +89,33 @@ const Contact = HumanModel.define({
             fn: function () {
                 if (!this.timezoneOffset) return '';
 
-                var localTime = new Date();
-                var localTZO = localTime.getTimezoneOffset();
-                var diff = Math.abs(localTZO  % (24 * 60) - this.timezoneOffset % (24 * 60));
-                var remoteTime = new Date(Date.now() + diff * 60000);
+                const localTime = new Date();
+                const localTZO = localTime.getTimezoneOffset();
+                const diff = Math.abs(localTZO % (24 * 60) - this.timezoneOffset % (24 * 60));
+                const remoteTime = new Date(Date.now() + diff * 60000);
 
 
-                var day = remoteTime.getDate();
-                var hour = remoteTime.getHours();
-                var minutes = remoteTime.getMinutes();
+                const day = remoteTime.getDate();
+                let hour = remoteTime.getHours();
+                const minutes = remoteTime.getMinutes();
 
-                var days = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+                const days = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-                var dow = days[remoteTime.getDay()];
-                var localDow = days[localTime.getDay()];
+                const dow = days[remoteTime.getDay()];
+                const localDow = days[localTime.getDay()];
 
-                var m = (hour >= 12) ? ' PM' : ' AM';
+                const m = (hour >= 12) ? ' PM' : ' AM';
 
                 hour = hour % 12;
                 if (hour === 0) {
                     hour = 12;
                 }
 
-                var strDay = (day < 10) ? '0' + day : day;
-                var strHour = (hour < 10) ? '0' + hour : hour;
-                var strMin = (minutes < 10) ? '0' + minutes: minutes;
+                const strDay = (day < 10) ? '0' + day : day;
+                const strHour = (hour < 10) ? '0' + hour : hour;
+                const strMin = (minutes < 10) ? '0' + minutes : minutes;
 
-                if (localDow == dow) {
+                if (localDow === dow) {
                     return strHour + ':' + strMin + m;
                 } else {
                     return dow + ' ' + strHour + ':' + strMin + m;
@@ -123,7 +125,7 @@ const Contact = HumanModel.define({
         status: {
             deps: ['topResource', 'lockedResource', '_forceUpdate'],
             fn: function () {
-                var resource = this.resources.get(this.lockedResource) || this.resources.get(this.topResource) || {};
+                const resource = this.resources.get(this.lockedResource!) || this.resources.get(this.topResource!) || {};
                 return resource.status || '';
             }
         },
@@ -133,21 +135,21 @@ const Contact = HumanModel.define({
                 if (this.resources.length === 0) {
                     return 'offline';
                 }
-                var resource = this.resources.get(this.lockedResource) || this.resources.get(this.topResource) || {};
+                const resource = this.resources.get(this.lockedResource!) || this.resources.get(this.topResource!) || {};
                 return resource.show || 'online';
             }
         },
         timezoneOffset: {
             deps: ['topResource', 'lockedResource', '_forceUpdate'],
             fn: function () {
-                var resource = this.resources.get(this.lockedResource) || this.resources.get(this.topResource) || {};
+                const resource = this.resources.get(this.lockedResource!) || this.resources.get(this.topResource!) || {};
                 return resource.timezoneOffset || undefined;
             }
         },
         idleSince: {
             deps: ['topResource', 'lockedResource', '_forceUpdate'],
             fn: function () {
-                var resource = this.resources.get(this.lockedResource) || this.resources.get(this.topResource) || {};
+                const resource = this.resources.get(this.lockedResource!) || this.resources.get(this.topResource!) || {};
                 return resource.idleSince || undefined;
             }
         },
@@ -160,9 +162,9 @@ const Contact = HumanModel.define({
         chatState: {
             deps: ['topResource', 'lockedResource', '_forceUpdate'],
             fn: function () {
-                var states = {};
+                const states: Record<string, boolean> = {};
                 this.resources.models.forEach(function (resource) {
-                    states[resource.chatState] = true;
+                    states[resource.chatState!] = true;
                 });
 
                 if (states.composing) return 'composing';
@@ -175,12 +177,12 @@ const Contact = HumanModel.define({
         chatStateText: {
             deps: ['topResource', 'lockedResource', '_forceUpdate'],
             fn: function () {
-                var chatState = this.chatState;
-                if (chatState == 'composing')
+                const chatState = this.chatState;
+                if (chatState === 'composing')
                     return this.displayName + ' is composing';
-                else if (chatState == 'paused')
+                else if (chatState === 'paused')
                     return this.displayName + ' stopped writing';
-                else if (chatState == 'gone')
+                else if (chatState === 'gone')
                     return this.displayName + ' is gone';
                 return '';
             }
@@ -189,7 +191,7 @@ const Contact = HumanModel.define({
             deps: ['lockedResource', '_forceUpdate'],
             fn: function () {
                 if (!this.lockedResource) return false;
-                var res = this.resources.get(this.lockedResource);
+                const res = this.resources.get(this.lockedResource);
                 return res.supportsReceipts;
             }
         },
@@ -197,14 +199,14 @@ const Contact = HumanModel.define({
             deps: ['lockedResource', '_forceUpdate'],
             fn: function () {
                 if (!this.lockedResource) return false;
-                var res = this.resources.get(this.lockedResource);
+                const res = this.resources.get(this.lockedResource);
                 return res && res.supportsChatStates;
             }
         },
         hasUnread: {
             deps: ['unreadCount'],
             fn: function () {
-                return this.unreadCount > 0;
+                return this.unreadCount && this.unreadCount > 0;
             }
         },
         jingleResources: {
@@ -223,29 +225,38 @@ const Contact = HumanModel.define({
         },
         callObject: {
             fn: function () {
-                return app.calls.where('contact', this);
+                return me.calls.where({ contact: this });
             }
-        }
+        },
     },
     collections: {
         resources: Resources,
-        messages: Messages
+        messages: Messages,
+    },
+    getName: function (jid?: string) {
+        return this.displayName;
+    },
+    getNickname: function (jid?: string) {
+        return this.displayName;
+    },
+    getAvatar: function (jid?: string) {
+        return this.avatar;
     },
     call: function () {
         if (this.jingleResources.length) {
-            var peer = this.jingleResources[0];
+            const peer = this.jingleResources[0];
             this.callState = 'starting';
-            app.api.call(peer.id);
+            client.call(peer.id);
         } else {
             logger.error('no jingle resources for this user');
         }
     },
-    setAvatar: function (id, type, source) {
-        var self = this;
+    setAvatar: function (id: string, type?: VCardType, source?: VCardSource) {
+        const self = this;
         fetchAvatar(this.jid, id, type, source, function (avatar) {
-            if (source == 'vcard' && self.avatarSource == 'pubsub') return;
-            self.avatarID = avatar.id;
-            self.avatar = avatar.uri;
+            if (source === 'vcard' && self.avatarSource === 'pubsub') return;
+            self.avatarID = avatar?.id;
+            self.avatar = avatar?.uri;
             self.avatarSource = source;
             self.save();
         });
@@ -253,14 +264,14 @@ const Contact = HumanModel.define({
     onResourceChange: function () {
         this.resources.sort();
         this.topResource = (this.resources.first() || {}).id;
-        this._forceUpdate++;
+        this._forceUpdate!++;
     },
     onResourceListChange: function () {
         // Manually propagate change events for properties that
         // depend on the resources collection.
         this.resources.sort();
 
-        var res = this.resources.first();
+        const res = this.resources.first();
         if (res) {
             this.offlineStatus = '';
             this.topResource = res.id;
@@ -270,11 +281,11 @@ const Contact = HumanModel.define({
 
         this.lockedResource = undefined;
     },
-    addMessage: function (message, notify) {
+    addMessage: function (message: MessageType, notify: boolean) {
         message.owner = me.jid.bare;
 
-        if (notify && (!this.activeContact || (this.activeContact && !app.state.focused)) && message.from.bare === this.jid) {
-            this.unreadCount++;
+        if (notify && (!this.activeContact || (this.activeContact && !app.state.focused)) && message.from?.bare === this.jid) {
+            this.unreadCount!++;
             app.notifications.create(this.displayName, {
                 body: message.body,
                 icon: this.avatar,
@@ -285,7 +296,7 @@ const Contact = HumanModel.define({
                 app.soundManager.play('ding');
         }
 
-        var existing = Message.idLookup(message.from[message.type == 'groupchat' ? 'full' : 'bare'], message.mid);
+        const existing = message.from && idLookup(message.from[message.type === 'groupchat' ? 'full' : 'bare'], message.mid);
         if (existing) {
             existing.set(message);
             existing.save();
@@ -294,23 +305,32 @@ const Contact = HumanModel.define({
             message.save();
         }
 
-        var newInteraction = new Date(message.created);
+        const newInteraction = new Date(message.created!);
         if (!this.lastInteraction || this.lastInteraction < newInteraction) {
             this.lastInteraction = newInteraction;
         }
     },
-    fetchHistory: function (onlyLastMessages, allInterval) {
-        var self = this;
+    fetchHistory: function (onlyLastMessages?: boolean, allInterval?: boolean) {
+        const self = this;
         app.whenConnected(function () {
-            var filter = {
-                'with': self.jid,
+            const filter: {
+                with: string,
                 rsm: {
-                    max: !!onlyLastMessages && !allInterval ? 50 : 40
-                }
+                    max: number,
+                    after?: string,
+                    before?: boolean | string,
+                },
+                start?: Date,
+                end?: Date,
+            } = {
+                with: self.jid,
+                rsm: {
+                    max: !!onlyLastMessages && !allInterval ? 50 : 40,
+                },
             };
 
             if (!!onlyLastMessages) {
-                var lastMessage = self.messages.last();
+                const lastMessage = self.messages.last();
                 if (lastMessage && lastMessage.archivedId) {
                     filter.rsm.after = lastMessage.archivedId;
                 }
@@ -318,7 +338,7 @@ const Contact = HumanModel.define({
                     filter.rsm.before = true;
 
                     if (self.lastHistoryFetch && !isNaN(self.lastHistoryFetch.valueOf())) {
-                        if (self.lastInteraction > self.lastHistoryFetch) {
+                        if (self.lastInteraction && self.lastInteraction > self.lastHistoryFetch) {
                             filter.start = self.lastInteraction;
                         } else {
                             filter.start = self.lastHistoryFetch;
@@ -328,38 +348,41 @@ const Contact = HumanModel.define({
                     }
                 }
             } else {
-                var firstMessage = self.messages.first();
+                const firstMessage = self.messages.first();
                 if (firstMessage && firstMessage.archivedId) {
                     filter.rsm.before = firstMessage.archivedId;
                 }
             }
 
-            client.searchHistory(filter, function (err, res) {
+            const search = (filter: Parameters<typeof client.searchHistory>[1]) => client.searchHistory(filter);
+
+            unpromisify(search)(filter, function (err, res) {
                 if (err) return;
 
                 self.lastHistoryFetch = new Date(Date.now() + app.timeInterval);
 
-                var results = res.mamResult.items || [];
+                const results = res.results || [];
                 if (!!onlyLastMessages && !allInterval) results.reverse();
                 results.forEach(function (result) {
-                    var msg = result.forwarded.message;
+                    const msg = result.item.message ?? {};
 
-                    msg.mid = msg.id;
+                    const mid = msg.id ?? '';
                     delete msg.id;
 
                     if (!msg.delay) {
-                        msg.delay = result.forwarded.delay;
+                        msg.delay = result.item.delay;
                     }
 
-                    if (msg.replace) {
-                        var original = Message.idLookup(msg.from[msg.type == 'groupchat' ? 'full' : 'bare'], msg.replace);
+                    if (msg.replace && msg.from) {
+                        const original = idLookup(msg.from, msg.replace);
                         // Drop the message if editing a previous, but
                         // keep it if it didn't actually change an
                         // existing message.
                         if (original && original.correct(msg)) return;
                     }
 
-                    var message = new Message(msg);
+                    const message = new Message(msg);
+                    message.mid = mid;
                     message.archivedId = result.id;
                     message.acked = true;
 
@@ -367,7 +390,7 @@ const Contact = HumanModel.define({
                 });
 
                 if (allInterval) {
-                    if (results.length == 40) {
+                    if (results.length === 40) {
                         self.fetchHistory(true, true);
                     } else {
                         self.trigger('refresh');
@@ -379,8 +402,8 @@ const Contact = HumanModel.define({
     save: function () {
         if (!this.inRoster) return;
 
-        var storageId = crypto.createHash('sha1').update(this.owner + '/' + this.id).digest('hex');
-        var data = {
+        const storageId = crypto.createHash('sha1').update(this.owner + '/' + this.id).digest('hex');
+        const data = {
             storageId: storageId,
             owner: this.owner,
             jid: this.jid,
@@ -390,7 +413,9 @@ const Contact = HumanModel.define({
             avatarID: this.avatarID
         };
         app.storage.roster.add(data);
-    }
+    },
+    summarizeResources: function () {
+    },
 });
 
 export default Contact;

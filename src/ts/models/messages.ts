@@ -1,10 +1,12 @@
 
 import BaseCollection from './baseCollection';
-import Message, { MessageType } from './message';
+import Message from './message';
 
-
-module.exports = BaseCollection.extend({
+const Messages = BaseCollection.extend({
     type: 'messages',
     model: Message,
     comparator: 'created',
 });
+
+export default Messages;
+export type MessagesType = InstanceType<typeof Messages>;

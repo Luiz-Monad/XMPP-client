@@ -1,14 +1,12 @@
 
 import HumanView from 'human-view';
-import StanzaIo from 'stanza';
 import templates from 'templates';
 import ContactListItem from '../views/contactListItem';
 import MUCListItem from '../views/mucListItem';
-import CallView from '../views/call';
 import ContactRequestItem from '../views/contactRequest';
+import { StateType } from '../models/state';
 
-
-export default HumanView.extend({
+export default HumanView.define<StateType>().extend({
     template: templates.body,
     initialize: function () {
         this.listenTo(app.state, 'change:title', this.handleTitle);
@@ -26,12 +24,17 @@ export default HumanView.extend({
         'keydown #addcontact': 'keyDownAddContact',
         'keydown #joinmuc': 'keyDownJoinMUC',
         'blur #me .status': 'handleStatusChange',
-        'keydown .status': 'keyDownStatus'
+        'keydown .status': 'keyDownStatus',
     },
     classBindings: {
         connected: '#topbar',
         hasActiveCall: '#wrapper',
-        currentPageIsSettings: '.settings'
+        currentPageIsSettings: '.settings',
+    },
+    props: {
+        $joinmuc: '$',
+        $addcontact: '$',
+        $meStatus: '$',
     },
     render: function () {
         $('head').append(templates.head());
@@ -57,14 +60,14 @@ export default HumanView.extend({
         });
         return this;
     },
-    handleReconnect: function (e) {
+    handleReconnect: function (e: JQuery.ClickEvent) {
         client.connect();
     },
-    handleLinkClick: function (e) {
-        var t = $(e.target);
-        var aEl = t.is('a') ? t[0] : t.closest('a')[0];
-        var local = window.location.host === aEl.host;
-        var path = aEl.pathname.slice(1);
+    handleLinkClick: function (e: JQuery.ClickEvent) {
+        const t = $(e.target!);
+        const aEl = t.is('a') ? t[0] : t.closest('a')[0];
+        const local = window.location.host === aEl.host;
+        const path = aEl.pathname.slice(1);
 
         if (local) {
             e.preventDefault();
@@ -72,69 +75,69 @@ export default HumanView.extend({
             return false;
         }
     },
-    handleEmbedClick: function (e) {
+    handleEmbedClick: function (e: JQuery.ClickEvent) {
         if (e.shiftKey) {
             e.preventDefault();
-            $(e.currentTarget).toggleClass('collapsed');
+            $(e.currentTarget!).toggleClass('collapsed');
         }
     },
-    handleTitle: function (e) {
+    handleTitle: function (e: JQuery.Event) {
         document.title = app.state.title;
     },
-    handleStatusChange: function (e) {
-        var text = e.target.textContent;
+    handleStatusChange: function (e: JQuery.ChangeEvent) {
+        const text = e.target.textContent;
         me.status = text;
         client.sendPresence({
             status: text,
-            caps: client.disco.caps
+            legacyCapabilities: Object.values(client.disco.caps),
         });
     },
-    keyDownStatus: function (e) {
+    keyDownStatus: function (e: JQuery.KeyDownEvent) {
         if (e.which === 13 && !e.shiftKey) {
             e.target.blur();
             return false;
         }
     },
-    handleLogout: function (e) {
+    handleLogout: function (e: JQuery.ClickEvent) {
         app.navigate('/logout');
     },
-    handleAddContact: function (e) {
+    handleAddContact: function (e: JQuery.Event) {
         e.preventDefault();
 
-        var contact = this.$('#addcontact').val();
-        if (contact.indexOf('@') == -1 && SERVER_CONFIG.domain)
+        let contact = this.$('#addcontact')?.val()?.toString();
+        if (contact && contact.indexOf('@') === -1 && SERVER_CONFIG.domain)
             contact += '@' + SERVER_CONFIG.domain;
         if (contact) {
-            app.api.sendPresence({to: contact, type: 'subscribe'});
+            client.sendPresence({ to: contact, type: 'subscribe' });
         }
         this.$('#addcontact').val('');
 
         return false;
     },
-    keyDownAddContact: function (e) {
+    keyDownAddContact: function (e: JQuery.KeyDownEvent) {
         if (e.which === 13 && !e.shiftKey) {
             this.handleAddContact(e);
             return false;
         }
     },
-    handleJoinMUC: function (e) {
+    handleJoinMUC: function (e: JQuery.Event) {
         e.preventDefault();
 
-        var mucjid = this.$('#joinmuc').val();
+        let mucjid = this.$('#joinmuc').val()?.toString() ?? '';
         this.$('#joinmuc').val('');
-        if (mucjid.indexOf('@') == -1 && SERVER_CONFIG.muc)
+        if (mucjid.indexOf('@') === -1 && SERVER_CONFIG.muc)
             mucjid += '@' + SERVER_CONFIG.muc;
         me.mucs.add({
             id: mucjid,
             name: mucjid,
-            jid: new StanzaIo.JID(mucjid),
+            jid: mucjid,
             nick: me.nick,
             autoJoin: true
         });
         me.mucs.save();
         me.mucs.get(mucjid).join(true);
     },
-    keyDownJoinMUC: function (e) {
+    keyDownJoinMUC: function (e: JQuery.KeyDownEvent) {
         if (e.which === 13 && !e.shiftKey) {
             this.handleJoinMUC(e);
             return false;
@@ -142,13 +145,13 @@ export default HumanView.extend({
     },
     connectionChange: function () {
         if (app.state.connected) {
-            this.$joinmuc.attr("disabled", false);
-            this.$addcontact.attr("disabled", false);
-            this.$meStatus.attr("contenteditable", true);
+            this.$joinmuc?.attr('disabled', null);
+            this.$addcontact?.attr('disabled', null);
+            this.$meStatus?.attr('contenteditable', 'true');
         } else {
-            this.$joinmuc.attr("disabled", "disabled");
-            this.$addcontact.attr("disabled", "disabled");
-            this.$meStatus.attr("contenteditable", false);
+            this.$joinmuc?.attr('disabled', 'disabled');
+            this.$addcontact?.attr('disabled', 'disabled');
+            this.$meStatus?.attr('contenteditable', null);
         }
-    }
+    },
 });

@@ -2,29 +2,28 @@
 import _ from 'underscore';
 import HumanView from 'human-view';
 import templates from 'templates';
+import { CallType } from '../models/call';
 import { ContactType } from '../models/contact';
 
-
-export default HumanView.extend({
-    model: {
-        contact: <ContactType> {},
-    },
-    $buttons: <JQuery<HTMLElement>> {},
+export default HumanView.define<CallType>().extend({
     template: templates.includes.call,
     classBindings: {
-        state: ''
+        state: '',
     },
     events: {
         'click .answer': 'handleAnswerClick',
         'click .ignore': 'handleIgnoreClick',
         'click .cancel': 'handleCancelClick',
         'click .end': 'handleEndClick',
-        'click .mute': 'handleMuteClick'
+        'click .mute': 'handleMuteClick',
+    },
+    props: {
+        $buttons: '$',
     },
     render: function () {
         this.renderAndBind();
         // register bindings for sub model
-        this.registerBindings(this.model.contact, {
+        this.registerBindings(this.model.contact as ContactType, {
             textBindings: {
                 displayName: '.callerName'
             },
@@ -37,47 +36,42 @@ export default HumanView.extend({
 
         return this;
     },
-    handleAnswerClick: function (e: Event) {
+    handleAnswerClick: function (e: JQuery.ClickEvent) {
         e.preventDefault();
-        var self = this;
+        const self = this;
+        if (!self.model.contact) return false;
         self.model.state = 'active';
         app.navigate('/chat/' + encodeURIComponent(self.model.contact.jid));
         self.model.contact.onCall = true;
-        self.model.jingleSession.accept();
+        self.model.accept();
         return false;
     },
-    handleIgnoreClick: function (e: Event) {
+    handleIgnoreClick: function (e: JQuery.ClickEvent) {
         e.preventDefault();
-        this.model.jingleSession.end({
-            condition: 'decline'
-        });
+        this.model.end('decline');
         return false;
     },
-    handleCancelClick: function (e: Event) {
+    handleCancelClick: function (e: JQuery.ClickEvent) {
         e.preventDefault();
-        this.model.jingleSession.end({
-            condition: 'cancel'
-        });
+        this.model.end('cancel');
         return false;
     },
-    handleEndClick: function (e: Event) {
+    handleEndClick: function (e: JQuery.ClickEvent) {
         e.preventDefault();
-        this.model.jingleSession.end({
-            condition: 'success'
-        });
+        this.model.end('success');
         return false;
     },
-    handleMuteClick: function (e: Event) {
+    handleMuteClick: function (e: JQuery.ClickEvent) {
         return false;
     },
     // we want to make sure we show the appropriate buttons
-    // when in various stages of the call
-    handleCallStateChange: function (model: any, callState: any) {
-        var state: keyof typeof map = callState || this.model.state;
+    // when in constious stages of the call
+    handleCallStateChange: function (model: unknown, callState: string) {
+        const state = (callState || this.model.state) as keyof typeof map;
         // hide all
-        this.$buttons.hide();
+        this.$buttons?.hide();
 
-        var map = {
+        const map = {
             incoming: '.ignore, .answer',
             outgoing: '.cancel',
             accepted: '.end, .mute',
@@ -86,11 +80,11 @@ export default HumanView.extend({
             mute: '.end, .unmute',
             unmute: '.end, .mute',
             //hold: '',
-            //resumed: ''
+            //resumed: '',
         };
 
         console.log('map[state]', map[state]);
 
         this.$(map[state]).show();
-    }
+    },
 });

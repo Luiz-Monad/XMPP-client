@@ -6,27 +6,24 @@ import ArchiveStorage from './archive';
 import ProfileStorage from './profile';
 
 class Storage {
-    private db = null;
-    private init = [];
-    private avatars = new AvatarStorage(this);
-    private roster = new RosterStorage(this);
-    private disco = new DiscoStorage(this);
-    private archive = new ArchiveStorage(this);
-    private profiles = new ProfileStorage(this);
-    constructor() {
-    };
+    private _db: IDBDatabase | null = null;
+    readonly avatars = new AvatarStorage(this);
+    readonly roster = new RosterStorage(this);
+    readonly disco = new DiscoStorage(this);
+    readonly archive = new ArchiveStorage(this);
+    readonly profiles = new ProfileStorage(this);
     private version = 3;
-    open(cb) {
-        cb = cb || function () {};
+    open(cb: ((err: Error | null, db?: IDBDatabase) => void) | null) {
+        cb = cb || function () { };
 
-        var self = this;
-        var request = indexedDB.open('datastorage', this.version);
-        request.onsuccess = function (e: Event) {
-            self.db = e.target.result;
-            cb(null, false, self.db);
+        const self = this;
+        const request = indexedDB.open('datastorage', this.version);
+        request.onsuccess = function (e) {
+            self._db = this.result;
+            cb!(null, self._db);
         };
-        request.onupgradeneeded = function (e: Event) {
-            var db = e.target.result;
+        request.onupgradeneeded = function (e) {
+            const db = this.result;
             self.avatars.setup(db);
             self.roster.setup(db);
             self.disco.setup(db);
@@ -34,10 +31,13 @@ class Storage {
             self.profiles.setup(db);
         };
         request.onerror = function (e) {
-            cb(e);
+            cb!(this.error);
         }
     };
+    get db(): IDBDatabase {
+        if (!this._db) throw new Error('invalid state: not open')
+        return this._db;
+    }
 };
-
 
 export default Storage;

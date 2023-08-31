@@ -1,66 +1,86 @@
+import { JID } from '../models/jid';
+import { Delay } from '../models/message';
+import Storage from './index';
+
+type ArchiveId = string;
+
+type Archive = {
+    archivedId: ArchiveId;
+    owner?: string;
+    to?: JID;
+    from?: JID;
+    created?: Date;
+    body?: string;
+    type: string;
+    delay?: Delay;
+    edited?: boolean;
+    acked?: boolean;
+}
+
+type Cb = ((err: string | Event | null, res?: Archive) => void) | null;
+type CbArr = ((err: string | Event | null, res?: Archive[]) => void) | null;
 
 class ArchiveStorage {
-    private storage: any;
-    constructor(storage: any) {
+    private storage: Storage;
+    constructor(storage: Storage) {
         this.storage = storage;
     };
-    setup(db) {
+    setup(db: IDBDatabase) {
         if (db.objectStoreNames.contains('archive')) {
             db.deleteObjectStore('archive');
         }
-        var store = db.createObjectStore('archive', {
+        const store = db.createObjectStore('archive', {
             keyPath: 'archivedId'
         });
-        store.createIndex("owner", "owner", { unique: false });
+        store.createIndex('owner', 'owner', { unique: false });
     };
-    transaction(mode) {
-        var trans = this.storage.db.transaction('archive', mode);
+    transaction(mode: IDBTransactionMode) {
+        const trans = this.storage.db.transaction('archive', mode);
         return trans.objectStore('archive');
     };
-    add(message, cb) {
+    add(archive: Archive, cb?: Cb) {
         cb = cb || function () { };
-        var request = this.transaction('readwrite').put(message);
+        const request = this.transaction('readwrite').put(archive);
         request.onsuccess = function () {
-            cb(false, message);
+            cb!(null, archive);
         };
         request.onerror = cb;
     };
-    get(id, cb) {
+    get(id?: ArchiveId, cb?: Cb) {
         cb = cb || function () { };
         if (!id) {
-            return cb('not-found');
+            return cb!('not-found');
         }
-        var request = this.transaction('readonly').get(id);
+        const request = this.transaction('readonly').get(id);
         request.onsuccess = function (e) {
-            var res = request.result;
+            const res = request.result;
             if (res === undefined) {
-                return cb('not-found');
+                return cb!('not-found');
             }
             request.result.acked = true;
-            cb(false, request.result);
+            cb!(null, request.result);
         };
         request.onerror = cb;
     };
-    getAll(owner, cb) {
+    getAll(owner: unknown, cb?: CbArr) {
         cb = cb || function () { };
-        var results = [];
+        const results: Archive[] = [];
 
-        var store = this.transaction('readonly');
-        var request = store.index('owner').openCursor(IDBKeyRange.only(owner));
+        const store = this.transaction('readonly');
+        const request = store.index('owner').openCursor(IDBKeyRange.only(owner));
         request.onsuccess = function (e) {
-            var cursor = e.target.result;
+            const cursor = request.result;
             if (cursor) {
                 cursor.value.acked = true;
-                results.push(cursor.value);
+                results.push(cursor.value as Archive);
                 cursor.continue();
             } else {
-                cb(false, results);
+                cb!(null, results);
             }
         };
         request.onerror = cb;
     };
 
 };
-
 
 export default ArchiveStorage;

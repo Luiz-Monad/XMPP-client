@@ -2,10 +2,14 @@
 import _ from 'underscore';
 import HumanView from 'human-view';
 
-
 const BasePage = HumanView.extend({
-    show: function (animation) {
-        var self = this;
+    props: {
+        detached: 'boolean',
+        cache: 'boolean',
+    },
+
+    show: function (animation?: unknown) {
+        const self = this;
 
         $('body').scrollTop(0);
 
@@ -24,14 +28,14 @@ const BasePage = HumanView.extend({
 
         this.trigger('pageloaded');
 
-        if (this.model.jid) {
-            me.setActiveContact(this.model.jid);
+        if ('jid' in this.model) {
+            me.setActiveContact(this.model.jid as string);
         }
 
         return this;
     },
-    hide: function () {
-        var self = this;
+    hide: function (animation?: unknown) {
+        const self = this;
 
         this.$el.removeClass('active');
 
@@ -47,7 +51,9 @@ const BasePage = HumanView.extend({
         me.setActiveContact('');
 
         return this;
-    }
+    },
 });
 
 export default BasePage;
+export type BasePageType = InstanceType<typeof BasePage>;
+

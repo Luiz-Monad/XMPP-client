@@ -1,82 +1,111 @@
+import { Agent, Client, JXT } from "stanza";
+import unpromisify from "./unpromisify";
 
-export default function (client, stanzas) {
-    var types = stanzas.utils;
+type Cb = () => void;
 
-    var PushNotification = stanzas.define({
-        name: 'pushNotification',
+declare module 'stanza' {
+
+    export interface Agent {
+        registerPushService(jid: string, cb: Cb): void;
+        getPushServices(cb: Cb): void;
+        unregisterPushService(jid: string, cb: Cb): void;
+        otalkRegister(deviceID: string, cb: Cb): void;
+    }
+
+    export interface AgentEvents {
+        // mystanza: Message & { mystanza: MyStanza };
+    }
+
+    export interface RegisterPush {
+        service: string
+    }
+
+    export interface UnregisterPush {
+        service: string
+    }
+
+    export interface OtalkRegister {
+        deviceID: string
+    }
+
+    namespace Stanzas {
+
+        export interface Message {
+            registerPush?: RegisterPush;
+            unregisterPush?: UnregisterPush;
+            otalkRegister?: OtalkRegister;
+        }
+    }
+}
+
+
+export default function (client: Agent, registry: JXT.Registry) {
+
+    registry.define({
+        path: 'message.pushNotification',
         namespace: 'urn:xmpp:push:0',
         element: 'push',
         fields: {
-            body: types.subText('urn:xmpp:push:0', 'body')
+            body: JXT.childText('urn:xmpp:push:0', 'body')
         }
     });
 
-    stanzas.withMessage(function (Message) {
-        stanzas.extend(Message, PushNotification);
-    });
-
-    var RegisterPush = stanzas.define({
-        name: 'registerPush',
+    registry.define({
+        path: 'message.registerPush',
         namespace: 'urn:xmpp:push:0',
         element: 'register',
         fields: {
-            service: types.text()
+            service: JXT.text()
         }
     });
 
-    var UnregisterPush = stanzas.define({
-        name: 'unregisterPush',
+    registry.define({
+        path: 'message.unregisterPush',
         namespace: 'urn:xmpp:push:0',
         element: 'unregister',
         fields: {
-            service: types.text()
+            service: JXT.text()
         }
     });
 
-    var OtalkRegister = stanzas.define({
-        name: 'otalkRegister',
+    registry.define({
+        path: 'message.otalkRegister',
         namespace: 'http://otalk.im/protocol/push',
         element: 'register',
         fields: {
-            deviceID: types.text()
+            deviceID: JXT.text()
         }
     });
 
-    stanzas.withIq(function (Iq) {
-        stanzas.extend(Iq, RegisterPush);
-        stanzas.extend(Iq, UnregisterPush);
-        stanzas.extend(Iq, OtalkRegister);
-    });
-
     client.registerPushService = function (jid, cb) {
-        return client.sendIq({
-            type: 'set',
+        client.sendMessage({
             registerPush: {
                 service: jid
             }
-        }, cb);
+        });
+        return cb();
     };
 
     client.getPushServices = function (cb) {
-        return client.getDiscoItems('', 'urn:xmpp:push', cb);
+        return unpromisify(client.getDiscoItems)('', 'urn:xmpp:push', cb);
     };
 
     client.unregisterPushService = function (jid, cb) {
-        return client.sendIq({
-            type: 'set',
+        client.sendMessage({
             unregisterPush: {
                 service: jid
             }
-        }, cb);
+        });
+        return cb();
     };
 
     client.otalkRegister = function (deviceID, cb) {
-        return client.sendIq({
-            type: 'set',
+        client.sendMessage({
             to: 'push@push.otalk.im/prod',
             otalkRegister: {
                 deviceID: deviceID
             }
-        }, cb);
+        });
+        return cb();
     };
 };

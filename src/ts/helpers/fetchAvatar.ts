@@ -1,21 +1,31 @@
 
 import crypto from 'crypto';
+import unpromisify from './unpromisify';
+import { VCardTempRecord } from 'stanza/protocol';
+import { Avatar } from '../storage/avatars';
 
-function fallback(jid) {
-    if(!SERVER_CONFIG.gravatar) {
+
+export type VCardType = VCardTempRecord['type'];
+export type VCardSource = 'vcard' | 'pubsub';
+
+function fallback(jid: string): Partial<Avatar> {
+    if (!SERVER_CONFIG.gravatar) {
         return {
             // TODO something nicer than a gray pixel?
             uri: 'data:image/gif;base64,R0lGODdhAQABAIABAJmZmf///ywAAAAAAQABAAACAkQBADs='
         };
     }
 
-    var gID = crypto.createHash('md5').update(jid).digest('hex');
+    const gID = crypto.createHash('md5').update(jid).digest('hex');
     return {
         uri: 'https://gravatar.com/avatar/' + gID + '?s=80&d=mm'
     };
 };
 
-export default function (jid, id, type, source, cb) {
+export default function (
+    jid: string, id: string | undefined | null,
+    type: VCardType | undefined, source: VCardSource | undefined,
+    cb: (res?: Partial<Avatar>) => void) {
     if (!id) {
         return cb(fallback(jid));
     }
@@ -30,18 +40,19 @@ export default function (jid, id, type, source, cb) {
         }
 
         app.whenConnected(function () {
-            if (source == 'vcard') {
-                app.api.getVCard(jid, function (err, resp) {
+            if (source === 'vcard') {
+                unpromisify(client.getVCard)(jid, function (err, resp) {
                     if (err) {
                         return cb(fallback(jid));
                     }
 
-		            if (!resp.vCardTemp.photo) return cb(fallback(jid));
+                    const rec = resp.records ? resp.records[0] : null;
+                    if (!rec || rec.type !== 'photo') return cb(fallback(jid));
 
-                    type = resp.vCardTemp.photo.type || type;
+                    type = rec.type || type || 'photo';
 
-                    var data = resp.vCardTemp.photo.data;
-                    var uri = 'data:' + type + ';base64,' + data;
+                    const data = rec.data;
+                    const uri = 'data:' + type + ';base64,' + data;
 
                     avatar = {
                         id: id,
@@ -53,17 +64,17 @@ export default function (jid, id, type, source, cb) {
                     return cb(avatar);
                 });
             } else {
-                app.api.getAvatar(jid, id, function (err, resp) {
+                unpromisify(client.getAvatar)(jid, id, function (err, resp) {
                     if (err) {
-                        return; 
+                        return;
                     }
 
-                    var data = resp.pubsub.retrieve.item.avatarData;
-                    var uri = 'data:' + type + ';base64,' + data;
+                    const data = resp.content?.data;
+                    const uri = 'data:' + type + ';base64,' + data;
 
                     avatar = {
                         id: id,
-                        type: type,
+                        type: type ?? 'pubsub',
                         uri: uri
                     };
 

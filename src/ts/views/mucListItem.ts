@@ -2,37 +2,37 @@
 import _ from 'underscore';
 import HumanView from 'human-view';
 import templates from 'templates';
+import { MUCType } from '../models/muc';
 
-
-export default HumanView.extend({
+export default HumanView.define<MUCType>().extend({
     template: templates.includes.mucListItem,
     classBindings: {
         activeContact: '',
         hasUnread: '',
         joined: '',
-        persistent: ''
+        persistent: '',
     },
     textBindings: {
         displayName: '.name',
-        displayUnreadCount: '.unread'
+        displayUnreadCount: '.unread',
     },
     events: {
         'click': 'handleClick',
         'click .join': 'handleJoinRoom',
-        'click .remove': 'handleLeaveRoom'
+        'click .remove': 'handleLeaveRoom',
     },
     render: function () {
         this.renderAndBind({contact: this.model});
         return this;
     },
-    handleClick: function (e: Event) {
-        app.navigate('groupchat/' + encodeURIComponent(this.model.jid));
+    handleClick: function (e: JQuery.ClickEvent) {
+        app.navigate('groupchat/' + encodeURIComponent(this.model.jid ?? ''));
     },
-    handleJoinRoom: function (e: Event) {
+    handleJoinRoom: function (e: JQuery.ClickEvent) {
         this.model.join();
     },
-    handleLeaveRoom: function (e: Event) {
-        var  muc = this.model;
+    handleLeaveRoom: function (e: JQuery.ClickEvent) {
+        const  muc = this.model;
 	    muc.leave();
-    }
+    },
 });

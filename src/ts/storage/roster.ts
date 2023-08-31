@@ -1,86 +1,94 @@
+import Storage from './index'
 
-// SCHEMA
-//    jid: string
-//    name: string
-//    subscription: string
-//    groups: array
-//    rosterID: string
+type RosterId = string;
+
+export type Roster = {
+    storageId: RosterId;
+    jid: string;
+    name?: string;
+    subscription?: string;
+    groups?: string[];
+    owner?: string;
+    avatarID?: string;
+}
+
+type Cb = ((err: string | Event | null, res?: Roster) => void) | null;
+type CbArr = ((err: string | Event | null, res?: Roster[]) => void) | null;
 
 class RosterStorage {
-    private storage: any;
-    constructor(storage: any) {
+    private storage: Storage;
+    constructor(storage: Storage) {
         this.storage = storage;
     };
-    setup(db) {
+    setup(db: IDBDatabase) {
         if (db.objectStoreNames.contains('roster')) {
             db.deleteObjectStore('roster');
         }
-        var store = db.createObjectStore('roster', {
+        const store = db.createObjectStore('roster', {
             keyPath: 'storageId'
         });
-        store.createIndex("owner", "owner", {unique: false});
+        store.createIndex('owner', 'owner', { unique: false });
     };
-    transaction(mode) {
-        var trans = this.storage.db.transaction('roster', mode);
+    transaction(mode: IDBTransactionMode) {
+        const trans = this.storage.db.transaction('roster', mode);
         return trans.objectStore('roster');
     };
-    add(contact, cb) {
-        cb = cb || function () {};
-        var request = this.transaction('readwrite').put(contact);
+    add(contact?: Roster, cb?: Cb) {
+        cb = cb || function () { };
+        const request = this.transaction('readwrite').put(contact);
         request.onsuccess = function () {
-            cb(false, contact);
+            cb!(null, contact);
         };
         request.onerror = cb;
     };
-    get(id, cb) {
-        cb = cb || function () {};
+    get(id?: RosterId, cb?: Cb) {
+        cb = cb || function () { };
         if (!id) {
-            return cb('not-found');
+            return cb!('not-found');
         }
-        var request = this.transaction('readonly').get(id);
+        const request = this.transaction('readonly').get(id);
         request.onsuccess = function (e) {
-            var res = request.result;
+            const res = request.result;
             if (res === undefined) {
-                return cb('not-found');
+                return cb!('not-found');
             }
-            cb(false, request.result);
+            cb!(null, request.result);
         };
         request.onerror = cb;
     };
-    getAll(owner, cb) {
-        cb = cb || function () {};
-        var results = [];
+    getAll(owner: unknown, cb?: CbArr) {
+        cb = cb || function () { };
+        const results: Roster[] = [];
 
-        var store = this.transaction('readonly');
-        var request = store.index('owner').openCursor(IDBKeyRange.only(owner));
+        const store = this.transaction('readonly');
+        const request = store.index('owner').openCursor(IDBKeyRange.only(owner));
         request.onsuccess = function (e) {
-            var cursor = e.target.result;
+            const cursor = request.result;
             if (cursor) {
-                results.push(cursor.value);
+                results.push(cursor.value as Roster);
                 cursor.continue();
             } else {
-                cb(false, results);
+                cb!(null, results);
             }
         };
         request.onerror = cb;
     };
-    remove(id, cb) {
-        cb = cb || function () {};
-        var request = this.transaction('readwrite')['delete'](id);
+    remove(id: RosterId, cb?: Cb) {
+        cb = cb || function () { };
+        const request = this.transaction('readwrite').delete(id);
         request.onsuccess = function (e) {
-            cb(false, request.result);
+            cb!(null, request.result);
         };
         request.onerror = cb;
     };
-    clear(cb) {
-        cb = cb || function () {};
-        var request = this.transaction('readwrite').clear();
+    clear(cb?: Cb) {
+        cb = cb || function () { };
+        const request = this.transaction('readwrite').clear();
         request.onsuccess = function () {
-            cb(false, request.result);
+            cb!(null, request.result);
         };
         request.onerror = cb;
     };
 };
-
 
 export default RosterStorage;

@@ -2,44 +2,44 @@
 import _ from 'underscore';
 import HumanView from 'human-view';
 import templates from 'templates';
+import { ContactType } from '../models/contact';
 
-
-export default HumanView.extend({
+export default HumanView.define<ContactType>().extend({
     template: templates.includes.contactRequest,
-    initialize: function (opts) {
+    initialize: function (opts: unknown) {
         this.render();
     },
     events: {
         'click .approve': 'handleApprove',
-        'click .deny': 'handleDeny'
+        'click .deny': 'handleDeny',
     },
     textBindings: {
-        jid: '.jid'
+        jid: '.jid',
     },
     render: function () {
-        this.renderAndBind({message: this.model});
+        this.renderAndBind({ message: this.model });
         return this;
     },
-    handleApprove: function (e: Event) {
+    handleApprove: function (e: JQuery.ClickEvent) {
         e.preventDefault();
-        app.api.sendPresence({
+        client.sendPresence({
             to: this.model.jid,
             type: 'subscribed'
         });
-        app.api.sendPresence({
-          to: this.model.jid,
-          type: 'subscribe'
+        client.sendPresence({
+            to: this.model.jid,
+            type: 'subscribe'
         });
-        app.me.contactRequests.remove(this.model);
+        me.contactRequests.remove(this.model);
         return false;
     },
-    handleDeny: function (e: Event) {
+    handleDeny: function (e: JQuery.ClickEvent) {
         e.preventDefault();
-        app.api.sendPresence({
+        client.sendPresence({
             to: this.model.jid,
             type: 'unsubscribed'
         });
-        app.me.contactRequests.remove(this.model);
+        me.contactRequests.remove(this.model);
         return false;
-    }
+    },
 });

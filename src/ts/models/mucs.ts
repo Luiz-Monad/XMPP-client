@@ -1,15 +1,15 @@
 
-import async from 'async';
 import BaseCollection from './baseCollection';
 import MUC, { MUCType } from './muc';
+import unpromisify from '../helpers/unpromisify';
+import { MUCBookmark } from 'stanza/protocol';
 
-
-module.exports = BaseCollection.extend({
+const MUCs = BaseCollection.extend({
     type: 'mucs',
     model: MUC,
     comparator: function (model1: MUCType, model2: MUCType) {
-        var name1 = model1.displayName.toLowerCase();
-        var name2 = model2.displayName.toLowerCase();
+        const name1 = model1.displayName.toLowerCase();
+        const name2 = model2.displayName.toLowerCase();
         if (name1 === name2) {
             return 0;
         }
@@ -18,16 +18,16 @@ module.exports = BaseCollection.extend({
         }
         return 1;
     },
-    initialize: function (model, options) {
+    initialize: function (model: unknown, options: unknown) {
         this.bind('change', this.sort, this);
     },
     fetch: function () {
-        var self = this;
+        const self = this;
         app.whenConnected(function () {
-            client.getBookmarks(function (err, res) {
+            unpromisify(client.getBookmarks)(function (err, res) {
                 if (err) return;
 
-                var mucs = res.privateStorage.bookmarks.conferences || [];
+                const mucs = res || [];
                 mucs.forEach(function (muc) {
                     self.add(muc);
                     if (muc.autoJoin) {
@@ -39,19 +39,23 @@ module.exports = BaseCollection.extend({
             });
         });
     },
-    save: function (cb) {
-        var self = this;
+    save: function (cb?: () => void) {
+        cb = cb || function () { };
+        const self = this;
         app.whenConnected(function () {
-            var models = [];
+            const models: MUCBookmark[] = [];
             self.models.forEach(function (model) {
                 models.push({
                     name: model.name,
-                    jid: model.jid,
+                    jid: model.jid ?? '',
                     nick: model.nick,
                     autoJoin: model.autoJoin
                 });
             });
-            client.setBookmarks({conferences: models}, cb);
+            unpromisify(client.setBookmarks)(models, cb!);
         });
     },
 });
+
+export default MUCs;
+export type MUCsType = InstanceType<typeof MUCs>;

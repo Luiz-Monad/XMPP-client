@@ -2,11 +2,11 @@
 import _ from 'underscore';
 import HumanView from 'human-view';
 import templates from 'templates';
+import { MessageType } from '../models/message';
 
-
-export default HumanView.extend({
+export default HumanView.define<MessageType>().extend({
     template: templates.includes.message,
-    initialize: function (opts) {
+    initialize: function (opts: unknown) {
         this.render();
     },
     classBindings: {
@@ -15,14 +15,14 @@ export default HumanView.extend({
         pending: '.message',
         delayed: '.message',
         edited: '.message',
-        meAction: '.message'
+        meAction: '.message',
     },
     textBindings: {
         body: '.body',
-        formattedTime: '.timestamp'
+        formattedTime: '.timestamp',
     },
     render: function () {
-        this.renderAndBind({message: this.model});
+        this.renderAndBind({ message: this.model });
         return this;
-    }
+    },
 });

@@ -1,10 +1,9 @@
 
-import { any } from 'async';
 import HumanModel from 'human-model';
 
 const State = HumanModel.define({
     initialize: function () {
-        var self = this;
+        const self = this;
         $(window).blur(function () {
             self.focused = false;
         });
@@ -35,7 +34,8 @@ const State = HumanModel.define({
         pageTitle: 'string',
         hasActiveCall: ['boolean', false, false],
         deviceID: ['string', false, ''],
-        pageChanged: ['string', false, '']
+        pageChanged: ['string', false, ''],
+        idleTimer: NodeJS.Timeout,
     },
     derived: {
         title: {
@@ -57,12 +57,12 @@ const State = HumanModel.define({
             fn: function () {
                 return this.pageChanged === 'settings' ? 'active' : '';
             }
-        }
+        },
     },
     markActive: function () {
         clearTimeout(this.idleTimer);
 
-        var wasInactive = !this.active;
+        const wasInactive = !this.active;
         this.active = true;
         this.idleSince = new Date(Date.now());
 
@@ -75,8 +75,8 @@ const State = HumanModel.define({
 
         this.active = false;
         this.idleSince = new Date(Date.now());
-    }
+    },
 });
 
 export default State;
-export type StateType = typeof State;
+export type StateType = InstanceType<typeof State>;

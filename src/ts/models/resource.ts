@@ -1,14 +1,15 @@
 
 import HumanModel from 'human-model';
-import fetchAvatar from '../helpers/fetchAvatar';
+import fetchAvatar, { VCardSource, VCardType } from '../helpers/fetchAvatar';
+import unpromisify from '../helpers/unpromisify';
 
+class DiscoInfo {
+    features: string[] = [];
+}
 
 const Resource = HumanModel.define({
-    initialize: function () {},
+    initialize: function () { },
     type: 'resource',
-    props: {
-        avatarID: ['string', false, '']        
-    },
     session: {
         id: ['string', true],
         status: 'string',
@@ -16,10 +17,11 @@ const Resource = HumanModel.define({
         priority: ['number', false, 0],
         chatState: ['string', false, 'gone'],
         idleSince: 'date',
-        discoInfo: 'object',
+        discoInfo: DiscoInfo,
         timezoneOffset: 'number',
         avatar: 'string',
-        avatarSource: 'string'        
+        avatarSource: 'string',
+        avatarID: ['string', false, ''],
     },
     derived: {
         mucDisplayName: {
@@ -38,7 +40,7 @@ const Resource = HumanModel.define({
             deps: ['discoInfo'],
             fn: function () {
                 if (!this.discoInfo) return false;
-                var features = this.discoInfo.features || [];
+                const features = this.discoInfo.features || [];
                 return features.indexOf('urn:xmpp:receipts') >= 0;
             }
         },
@@ -46,7 +48,7 @@ const Resource = HumanModel.define({
             deps: ['discoInfo'],
             fn: function () {
                 if (!this.discoInfo) return false;
-                var features = this.discoInfo.features || [];
+                const features = this.discoInfo.features || [];
                 return features.indexOf('http://jabber.org/protocol/chatstate') >= 0;
             }
         },
@@ -54,7 +56,7 @@ const Resource = HumanModel.define({
             deps: ['discoInfo'],
             fn: function () {
                 if (!this.discoInfo) return false;
-                var features = this.discoInfo.features || [];
+                const features = this.discoInfo.features || [];
                 if (features.indexOf('urn:xmpp:jingle:1') === -1) {
                     return false;
                 }
@@ -78,7 +80,7 @@ const Resource = HumanModel.define({
             deps: ['discoInfo'],
             fn: function () {
                 if (!this.discoInfo) return false;
-                var features = this.discoInfo.features || [];
+                const features = this.discoInfo.features || [];
                 if (features.indexOf('urn:xmpp:jingle:1') === -1) {
                     return false;
                 }
@@ -100,40 +102,39 @@ const Resource = HumanModel.define({
         }
     },
     fetchTimezone: function () {
-        var self = this;
+        const self = this;
 
         if (self.timezoneOffset) return;
 
         app.whenConnected(function () {
-            client.getTime(self.id, function (err, res) {
+            unpromisify(client.getTime)(self.id, function (err, res) {
                 if (err) return;
-                self.timezoneOffset = res.time.tzo;
+                self.timezoneOffset = res.tzo;
             });
         });
     },
     fetchDisco: function () {
-        var self = this;
+        const self = this;
 
         if (self.discoInfo) return;
 
         app.whenConnected(function () {
-            client.getDiscoInfo(self.id, '', function (err, res) {
+            unpromisify(client.getDiscoInfo)(self.id, '', function (err, res) {
                 if (err) return;
-                self.discoInfo = res.discoInfo;
+                self.discoInfo = res;
             });
         });
     },
-    setAvatar: function (id, type, source) {
-        var self = this;
+    setAvatar: function (id?: string, type?: VCardType, source?: VCardSource) {
+        const self = this;
         fetchAvatar(this.id, id, type, source, function (avatar) {
-            if (source == 'vcard' && self.avatarSource == 'pubsub') return;
-            self.avatarID = avatar.id;
-            self.avatar = avatar.uri;
+            if (source === 'vcard' && self.avatarSource === 'pubsub') return;
+            self.avatarID = avatar?.id;
+            self.avatar = avatar?.uri;
             self.avatarSource = source;
         });
     },
-    
 });
 
 export default Resource;
-export type ResourceType = typeof Resource;
+export type ResourceType = InstanceType<typeof Resource>;

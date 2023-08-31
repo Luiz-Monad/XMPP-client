@@ -1,9 +1,11 @@
 
 import BaseCollection from './baseCollection';
-import Call, { CallType } from './call';
+import Call from './call';
 
-
-module.exports = BaseCollection.extend({
+const Calls = BaseCollection.extend({
     type: 'calls',
     model: Call
 });
+
+export default Calls;
+export type CallsType = InstanceType<typeof Calls>;

@@ -1,18 +1,19 @@
 
 import _ from 'underscore';
-import StanzaIo from 'stanza';
+import { Constants } from 'stanza';
 import StayDown from 'staydown';
 import BasePage from './base';
 import templates from 'templates';
-import Message from '../views/message';
-import MessageModel from '../models/message';
+import MessageModel, { MessageType } from '../models/message';
 import embedIt from '../helpers/embedIt';
 import htmlify from '../helpers/htmlify';
-import attachMediaStream from 'attachmediastream';
+import { ContactType } from '../models/contact';
+import { ChatState } from 'stanza/Constants';
+import { ResourceType } from '../models/resource';
 
-const ChatPage = BasePage.extend({
+const ChatPage = BasePage.define<ContactType>().extend({
     template: templates.pages.chat,
-    initialize: function (spec) {
+    initialize: function (spec: unknown) {
         this.editMode = false;
 
         this.listenTo(this, 'pageloaded', this.handlePageLoaded);
@@ -33,37 +34,52 @@ const ChatPage = BasePage.extend({
         'click .call': 'handleCallClick',
         'click .accept': 'handleAcceptClick',
         'click .end': 'handleEndClick',
-        'click .mute': 'handleMuteClick'
+        'click .mute': 'handleMuteClick',
     },
     srcBindings: {
-        streamUrl: 'video.remote'
+        streamUrl: 'video.remote',
     },
     textBindings: {
         displayName: 'header .name',
         formattedTZO: 'header .tzo',
         status: 'header .status',
-        chatStateText: '.chatBox .contactState'
+        chatStateText: '.chatBox .contactState',
     },
     classBindings: {
         chatState: 'header',
         idle: '.user_presence',
         show: '.user_presence',
-        onCall: '.conversation'
+        onCall: '.conversation',
     },
-    show: function (animation) {
+    props: {
+        firstChanged: 'boolean',
+        editMode: 'boolean',
+        rendered: 'boolean',
+        typing: 'boolean',
+        paused: 'boolean',
+        firstModel: MessageModel,
+        lastModel: MessageModel,
+        firstDate: 'string',
+        lastDate: 'string',
+        $chatInput: '$',
+        $chatBox: '$',
+        $messageList: '$',
+        staydown: StayDown,
+    },
+    show: function (animation: unknown) {
         BasePage.prototype.show.apply(this, [animation]);
         this.sendChatState('active');
 
         this.firstChanged = true;
-        var self = this;
-        $('.messages').scroll(function() {
-            if (self.firstChanged && $(".messages li:first-child").offset().top > 0) {
+        const self = this;
+        $('.messages').scroll(function () {
+            if (self.firstChanged && ($('.messages li:first-child').offset()?.top ?? 0) > 0) {
                 self.firstChanged = false;
                 self.model.fetchHistory();
             }
         });
 
-        this.$chatInput.focus();
+        this.$chatInput?.focus();
     },
     hide: function () {
         BasePage.prototype.hide.apply(this);
@@ -71,7 +87,7 @@ const ChatPage = BasePage.extend({
     },
     render: function () {
         if (this.rendered) return this;
-        var self = this;
+        const self = this;
 
         this.rendered = true;
 
@@ -82,7 +98,7 @@ const ChatPage = BasePage.extend({
         this.$chatBox = this.$('.chatBox');
         this.$messageList = this.$('.messages');
 
-        this.staydown = new StayDown({target: this.$messageList[0], interval: 500});
+        this.staydown = new StayDown({ target: this.$messageList[0], interval: 500 });
         this.renderCollection();
 
         this.listenTo(this.model.messages, 'add', this.handleChatAdded);
@@ -98,19 +114,21 @@ const ChatPage = BasePage.extend({
 
         return this;
     },
-    handlePageLoaded: function (e: Event) {
+    handlePageLoaded: function (e: JQuery.Event) {
         this.staydown.checkdown();
         this.resizeInput();
     },
-    handleCallClick: function (e: Event) {
+    handlePageUnloaded: function (e: JQuery.Event) {
+    },
+    handleCallClick: function (e: JQuery.Event) {
         e.preventDefault();
         this.model.call();
         return false;
     },
     renderCollection: function () {
-        var self = this;
+        const self = this;
 
-        this.$messageList.empty();
+        this.$messageList?.empty();
         delete this.firstModel;
         delete this.firstDate;
         delete this.lastModel;
@@ -121,51 +139,51 @@ const ChatPage = BasePage.extend({
         });
         this.staydown.checkdown();
     },
-    handleKeyDown: function (e: KeyboardEvent) {
+    handleKeyDown: function (e: JQuery.KeyDownEvent) {
         if (e.which === 13 && !e.shiftKey) {
             app.composing[this.model.jid] = '';
             this.sendChat();
             this.sendChatState('active');
             e.preventDefault();
             return false;
-        } else if (e.which === 38 && this.$chatInput.val() === '' && this.model.lastSentMessage) {
+        } else if (e.which === 38 && (this.$chatInput?.val()?.toString()?.length ?? 0) === 0 && this.model.lastSentMessage) {
             this.editMode = true;
-            this.$chatInput.addClass('editing');
-            this.$chatInput.val(this.model.lastSentMessage.body);
+            this.$chatInput?.addClass('editing');
+            this.$chatInput?.val(this.model.lastSentMessage.body!);
             e.preventDefault();
             return false;
         } else if (e.which === 40 && this.editMode) {
             this.editMode = false;
-            this.$chatInput.removeClass('editing');
+            this.$chatInput?.removeClass('editing');
             e.preventDefault();
             return false;
         } else if (!e.ctrlKey && !e.metaKey) {
             if (!this.typing || this.paused) {
                 this.typing = true;
                 this.paused = false;
-                this.$chatInput.addClass('typing');
+                this.$chatInput?.addClass('typing');
                 this.sendChatState('composing');
             }
         }
     },
-    handleKeyUp: function (e: KeyboardEvent) {
+    handleKeyUp: function (e: JQuery.KeyUpEvent) {
         this.resizeInput();
-        app.composing[this.model.jid] = this.$chatInput.val();
-        if (this.typing && this.$chatInput.val().length === 0) {
+        app.composing[this.model.jid!] = this.$chatInput?.val()?.toString() ?? '';
+        if (this.typing && (this.$chatInput?.val()?.toString()?.length ?? 0) === 0) {
             this.typing = false;
-            this.$chatInput.removeClass('typing');
+            this.$chatInput?.removeClass('typing');
             this.sendChatState('active');
         } else if (this.typing) {
             this.pausedTyping();
         }
     },
-    pausedTyping: _.debounce(function () {
+    pausedTyping: /*debounce*/ function () {
         if (this.typing && !this.paused) {
             this.paused = true;
             this.sendChatState('paused');
         }
-    }, 3000),
-    sendChatState: function (state) {
+    },
+    sendChatState: function (state: ChatState) {
         //if (!this.model.supportsChatStates) return;
         client.sendMessage({
             to: this.model.lockedResource || this.model.jid,
@@ -173,42 +191,49 @@ const ChatPage = BasePage.extend({
         });
     },
     sendChat: function () {
-        var message;
-        var val = this.$chatInput.val();
+        const val = this.$chatInput?.val()?.toString();
 
         if (val) {
             this.staydown.intend_down = true;
 
-            var links = _.map(htmlify.collectLinks(val), function (link) {
-                return {url: link};
+            const links = _.map(htmlify.collectLinks(val), function (link) {
+                return { url: link };
             });
 
-            message = {
+            const bmessage = {
                 id: client.nextId(),
-                to: new StanzaIo.JID(this.model.lockedResource || this.model.jid),
-                type: 'chat',
+                to: this.model.lockedResource || this.model.jid,
+                type: 'chat' as Constants.MessageType,
                 body: val,
                 requestReceipt: true,
-                oobURIs: links
+                oobURIs: links,
             };
+            const message: Partial<typeof bmessage> & {
+                chatState?: Constants.ChatState,
+                replace?: string,
+                from?: string,
+            } = bmessage;
             if (this.model.supportsChatStates) {
                 message.chatState = 'active';
             }
             if (this.editMode) {
-                message.replace = this.model.lastSentMessage.id;
+                message.replace = this.model.lastSentMessage?.id?.toString();
             }
 
             client.sendMessage(message);
 
             // Prep message to create a Message model
-            message.from = me.jid;
-            message.mid = message.id;
+            const from = me.jid;
+            const mid = message.id;
             delete message.id;
 
+            const msgModel = new MessageModel(message);
+            msgModel.from = from;
+            msgModel.mid = mid;
+
             if (this.editMode) {
-                this.model.lastSentMessage.correct(message);
+                this.model.lastSentMessage?.correct(msgModel);
             } else {
-                var msgModel = new MessageModel(message);
                 this.model.addMessage(msgModel, false);
                 this.model.lastSentMessage = msgModel;
             }
@@ -216,164 +241,145 @@ const ChatPage = BasePage.extend({
         this.editMode = false;
         this.typing = false;
         this.paused = false;
-        this.$chatInput.removeClass('typing');
-        this.$chatInput.removeClass('editing');
-        this.$chatInput.val('');
+        this.$chatInput?.removeClass('typing');
+        this.$chatInput?.removeClass('editing');
+        this.$chatInput?.val('');
     },
-    handleChatAdded: function (model) {
+    handleChatAdded: function (model: MessageType) {
         this.appendModel(model, true);
     },
-    refreshModel: function (model) {
-        var existing = this.$('#chat' + model.cid);
+    refreshModel: function (model: MessageType) {
+        let existing = this.$('#chat' + model.cid);
         existing.replaceWith(model.bareMessageTemplate(existing.prev().hasClass('message_header')));
         existing = this.$('#chat' + model.cid);
         embedIt(existing);
     },
-    handleJingleResourcesChanged: function (model, val) {
-        var resources = val || this.model.jingleResources;
+    handleJingleResourcesChanged: function (model: unknown, val: ResourceType[]) {
+        const resources = val || this.model.jingleResources;
         this.$('button.call').prop('disabled', !resources.length);
     },
-    handleAvatarChanged: function (contact, uri) {
+    handleAvatarChanged: function (contact: ContactType, uri: string) {
         if (!me.isMe(contact.jid)) {
             $('.' + contact.jid.substr(0, contact.jid.indexOf('@')) + ' .messageAvatar img').attr('src', uri);
         }
     },
-    appendModel: function (model, preload) {
-        var newEl, first, last;
-        var msgDate = Date.create(model.timestamp);
-        var messageDay = msgDate.format('{month} {ord}, {yyyy}');
+    appendModel: function (model: MessageType, preload?: boolean) {
+        const msgDate = Date.create(model.timestamp!);
+        const messageDay = msgDate.format('{month} {ord}, {yyyy}');
 
-        if (this.firstModel === undefined || msgDate > Date.create(this.firstModel.timestamp)) {
+        if (this.firstModel === undefined || msgDate > new Date(this.firstModel.timestamp!)) {
             if (this.firstModel === undefined) {
                 this.firstModel = model;
                 this.firstDate = messageDay;
             }
 
             if (messageDay !== this.lastDate) {
-                var dayDivider = $(templates.includes.dayDivider({day_name: messageDay}));
+                const dayDivider = $(templates.includes.dayDivider({ day_name: messageDay }));
                 this.staydown.append(dayDivider[0]);
                 this.lastDate = messageDay;
             }
 
-            var isGrouped = model.shouldGroupWith(this.lastModel);
+            const isGrouped = model.shouldGroupWith(this.lastModel);
+            let newEl: JQuery;
             if (isGrouped) {
                 newEl = $(model.partialTemplateHtml);
-                last = this.$messageList.find('li').last();
-                last.find('.messageWrapper').append(newEl);
-                last.addClass('chatGroup');
+                const last = this.$messageList?.find('li')?.last();
+                last?.find('.messageWrapper')?.append(newEl);
+                last?.addClass('chatGroup');
                 this.staydown.checkdown();
             } else {
                 newEl = $(model.templateHtml);
-                if (!me.isMe(model.sender.jid)) newEl.addClass(model.sender.jid.substr(0, model.sender.jid.indexOf('@')));
+                if (!me.isMe(model.sender?.jid)) {
+                    const jid = typeof model.sender?.jid === 'string' ? model.sender?.jid : model.sender?.jid.full;
+                    newEl.addClass(jid?.substr(0, jid?.indexOf('@') ?? 0) ?? '');
+                }
                 this.staydown.append(newEl[0]);
                 this.lastModel = model;
             }
             if (!model.pending) embedIt(newEl);
         }
         else {
-            var scrollDown = this.$messageList.prop('scrollHeight') - this.$messageList.scrollTop();
-            var firstEl = this.$messageList.find('li').first();
+            const scrollDown = (this.$messageList?.prop('scrollHeight') ?? 0) - (this.$messageList?.scrollTop() ?? 0);
+            const firstEl = this.$messageList?.find('li')?.first();
 
             if (messageDay !== this.firstDate) {
-                var dayDivider = $(templates.includes.dayDivider({day_name: messageDay}));
-                firstEl.before(dayDivider[0]);
-                var firstEl = this.$messageList.find('li').first();
+                const dayDivider = $(templates.includes.dayDivider({ day_name: messageDay }));
+                firstEl?.before(dayDivider[0]);
                 this.firstDate = messageDay;
             }
 
-            var isGrouped = model.shouldGroupWith(this.firstModel);
+            const isGrouped = model.shouldGroupWith(this.firstModel);
+            let newEl: JQuery;
             if (isGrouped) {
                 newEl = $(model.partialTemplateHtml);
-                first = this.$messageList.find('li').first().next();
-                first.find('.messageWrapper div:first').after(newEl);
-                first.addClass('chatGroup');
+                const first = this.$messageList?.find('li')?.first()?.next();
+                first?.find('.messageWrapper div:first')?.after(newEl);
+                first?.addClass('chatGroup');
             } else {
                 newEl = $(model.templateHtml);
-                if (!me.isMe(model.sender.jid)) newEl.addClass(model.sender.jid.substr(0, model.sender.jid.indexOf('@')));
-                firstEl.after(newEl[0]);
+                if (!me.isMe(model.sender?.jid)) {
+                    const jid = typeof model.sender?.jid === 'string' ? model.sender?.jid : model.sender?.jid.full;
+                    newEl.addClass(jid?.substr(0, jid?.indexOf('@') ?? 0) ?? '');
+                }
+                firstEl?.after(newEl[0]);
                 this.firstModel = model;
             }
             if (!model.pending) embedIt(newEl);
 
-            this.$messageList.scrollTop(this.$messageList.prop('scrollHeight') - scrollDown);
+            this.$messageList?.scrollTop(this.$messageList.prop('scrollHeight') - scrollDown);
             this.firstChanged = true;
         }
     },
-    handleAcceptClick: function (e: Event) {
+    handleAcceptClick: function (e: JQuery.Event) {
         e.preventDefault();
-        var self = this;
-
         this.$('button.accept').prop('disabled', true);
-        if (this.model.jingleCall.jingleSession.state == 'pending') {
-            if (!client.jingle.localStream) {
-                client.jingle.startLocalMedia(null, function (err) {
-                    if (err) {
-                        self.model.jingleCall.end({
-                            condition: 'decline'
-                        });
-                    } else {
-                        client.sendPresence({ to: new StanzaIo.JID(self.model.jingleCall.jingleSession.peer) });
-                        self.model.jingleCall.jingleSession.accept();
-                    }
-                });
-            } else {
-                client.sendPresence({ to: new StanzaIo.JID(this.model.jingleCall.jingleSession.peer) });
-                this.model.jingleCall.jingleSession.accept();
-            }
+        if (this.model.jingleCall?.sid && this.model.jingleCall.state === 'pending') {
+            client.acceptCall(this.model.jingleCall.sid);
         }
         return false;
     },
-    handleEndClick: function (e: Event) {
+    handleEndClick: function (e: JQuery.Event) {
         e.preventDefault();
-        var condition = 'success';
-        if (this.model.jingleCall) {
-            if (this.model.jingleCall.jingleSession && this.model.jingleCall.jingleSession.state == 'pending') {
-                condition = 'decline';
-            }
-            this.model.jingleCall.end({
-                condition: condition
-            });
+        if (this.model.jingleCall?.sid) {
+            client.declineCall(this.model.jingleCall.sid)
         }
         return false;
     },
-    handleMuteClick: function (e: Event) {
+    handleMuteClick: function (e: JQuery.Event) {
         return false;
     },
-    resizeInput: _.throttle(function () {
-        var height;
-        var scrollHeight;
-        var heightDiff;
-        var newHeight;
-        var newMargin;
-        var marginDelta;
-        var maxHeight = parseInt(this.$chatInput.css('max-height'), 10);
+    resizeInput: /*throttle*/ function () {
+        const maxHeight = parseInt(this.$chatInput?.css('max-height')!, 10);
 
-        this.$chatInput.removeAttr('style');
-        height = this.$chatInput.outerHeight(),
-        scrollHeight = this.$chatInput.get(0).scrollHeight,
-        newHeight = Math.max(height, scrollHeight);
-        heightDiff = height - this.$chatInput.innerHeight();
+        this.$chatInput?.removeAttr('style');
+        const height = this.$chatInput?.outerHeight() ?? 0;
+        const scrollHeight = this.$chatInput?.get(0)?.scrollHeight ?? 0;
+        let newHeight = Math.max(height, scrollHeight);
+        const heightDiff = height - (this.$chatInput?.innerHeight() ?? 0);
 
         if (newHeight > maxHeight) newHeight = maxHeight;
         if (newHeight > height) {
-            this.$chatInput.css('height', newHeight+heightDiff);
-            this.$chatInput.scrollTop(this.$chatInput[0].scrollHeight - this.$chatInput.height());
-            newMargin = newHeight - height + heightDiff;
-            marginDelta = newMargin - parseInt(this.$messageList.css('marginBottom'), 10);
+            this.$chatInput?.css('height', newHeight + heightDiff);
+            this.$chatInput?.scrollTop(this.$chatInput[0].scrollHeight - (this.$chatInput?.height() ?? 0));
+            const newMargin = newHeight - height + heightDiff;
+            const marginDelta = newMargin - parseInt(this.$messageList?.css('marginBottom')!, 10);
             if (!!marginDelta) {
-                this.$messageList.css('marginBottom', newMargin);
+                this.$messageList?.css('marginBottom', newMargin);
             }
         } else {
-            this.$messageList.css('marginBottom', 0);
+            this.$messageList?.css('marginBottom', 0);
         }
-    }, 300),
+    },
     connectionChange: function () {
         if (app.state.connected) {
-            this.$chatInput.attr("disabled", false);
+            this.$chatInput?.attr('disabled', null);
         } else {
-            this.$chatInput.attr("disabled", "disabled");
+            this.$chatInput?.attr('disabled', 'disabled');
         }
-    }
+    },
 });
+
+ChatPage.prototype.pausedTyping = _.debounce(ChatPage.prototype.pausedTyping, 3000);
+ChatPage.prototype.resizeInput = _.throttle(ChatPage.prototype.resizeInput, 300)
 
 export default ChatPage;

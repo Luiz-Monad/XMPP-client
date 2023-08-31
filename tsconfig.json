@@ -13,12 +13,20 @@
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
-    "removeComments": true
+    "removeComments": true,
+    "baseUrl": "./src/js",
+    "paths": {
+      "templates": [
+        "templates.js"
+      ],
+      "resampler": [
+        "libraries/resampler.js"
+      ],
+      "parselinks": [
+        "libraries/parselinks.js"
+      ]
+    }
   },
-  "baseUrl": "./",
-  "paths": {
-    "templates": ["src/js/templates"]
-  },  
   "include": [
     "./src/**/*.ts",
     "./src/**/*.d.ts",

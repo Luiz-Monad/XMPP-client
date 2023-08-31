@@ -2,9 +2,9 @@
 import _ from 'underscore';
 import HumanView from 'human-view';
 import templates from 'templates';
+import { ContactType } from '../models/contact';
 
-
-export default HumanView.extend({
+export default HumanView.define<ContactType>().extend({
     template: templates.includes.contactListItem,
     classBindings: {
         show: '',
@@ -13,7 +13,7 @@ export default HumanView.extend({
         activeContact: '',
         hasUnread: '',
         idle: '',
-        persistent: ''
+        persistent: '',
     },
     textBindings: {
         displayName: '.name',
@@ -27,24 +27,24 @@ export default HumanView.extend({
         'click .remove': 'handleRemoveContact'
     },
     render: function () {
-        this.renderAndBind({contact: this.model});
+        this.renderAndBind({ contact: this.model });
         return this;
     },
-    handleClick: function (e: Event) {
+    handleClick: function (e: JQuery.ClickEvent) {
         if (me.contacts.get(this.model.jid)) {
             app.navigate('chat/' + encodeURIComponent(this.model.jid));
         }
     },
-    handleRemoveContact: function(e: Event) {
-        var question = "Remove "
+    handleRemoveContact: function (e: JQuery.ClickEvent) {
+        const question = 'Remove '
             + (this.model.name ?
-                (this.model.name + " (" +  this.model.jid + ")")
-                    : this.model.jid)
-            + " from contact list?";
-        if(!confirm(question)) return;
+                (this.model.name + ' (' + this.model.jid + ')')
+                : this.model.jid)
+            + ' from contact list?';
+        if (!confirm(question)) return;
         me.removeContact(this.model.jid);
-        if (app.history.fragment === 'chat/' + encodeURIComponent(this.model.jid)) {
+        if ('fragment' in app.history && app.history.fragment === 'chat/' + encodeURIComponent(this.model.jid)) {
             app.navigate('/');
         }
-    }
+    },
 });

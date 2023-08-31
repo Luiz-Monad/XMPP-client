@@ -1,9 +1,11 @@
 
 import BaseCollection from './baseCollection';
-import ContactRequest, { ContactRequestType } from './contactRequest';
+import ContactRequest from './contactRequest';
 
-
-module.exports = BaseCollection.extend({
+const ContactRequests = BaseCollection.extend({
     type: 'contactRequests',
     model: ContactRequest
 });
+
+export default ContactRequests;
+export type ContactRequestsType = InstanceType<typeof ContactRequests>;

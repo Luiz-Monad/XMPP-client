@@ -44,7 +44,6 @@ module.exports = {
             $: 'jquery',
             jQuery: 'jquery',
             Buffer: ['buffer', 'Buffer'],
-            Resample: path.join(__dirname, './src/js/libraries/resampler.js'),
             jQueryOem: path.join(__dirname, './src/js/libraries/jquery.oembed.js'),
         }),
         new webpack.LoaderOptionsPlugin({

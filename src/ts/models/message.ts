@@ -5,26 +5,40 @@ import uuid from 'node-uuid';
 import HumanModel from 'human-model';
 import templates from 'templates';
 import htmlify from '../helpers/htmlify';
+import { JID } from './jid';
 
-const ID_CACHE = {};
+export class Delay {
+    from?: string;
+    stamp?: Date;
+    reason?: string;
+};
+
+export class URI {
+    url?: string;
+    href?: string;
+    desc?: string;
+    source?: string;
+}
+
+const ID_CACHE: Record<string, Record<string, any>> = {};
 
 const Message = HumanModel.define({
-    initialize: function (attrs) {
+    initialize: function (attrs: unknown) {
         this._created = new Date(Date.now() + app.timeInterval);
     },
     type: 'message',
     props: {
         mid: 'string',
         owner: 'string',
-        to: 'object',
-        from: 'object',
+        to: JID,
+        from: JID,
         body: 'string',
         type: ['string', false, 'normal'],
         acked: ['bool', false, false],
         requestReceipt: ['bool', false, false],
         receipt: ['bool', false, false],
         archivedId: 'string',
-        oobURIs: 'array'
+        oobURIs: ['array', false, [], URI],
     },
     derived: {
         mine: {
@@ -71,15 +85,15 @@ const Message = HumanModel.define({
             deps: ['created'],
             fn: function () {
                 if (this.created) {
-                    var month = this.created.getMonth() + 1;
-                    var day = this.created.getDate();
-                    var hour = this.created.getHours();
-                    var minutes = this.created.getMinutes();
+                    const month = this.created.getMonth() + 1;
+                    const day = this.created.getDate();
+                    const hour = this.created.getHours();
+                    const minutes = this.created.getMinutes();
 
-                    var m = (hour >= 12) ? 'p' : 'a';
-                    var strDay = (day < 10) ? '0' + day : day;
-                    var strHour = (hour < 10) ? '0' + hour : hour;
-                    var strMin = (minutes < 10) ? '0' + minutes: minutes;
+                    const m = (hour >= 12) ? 'p' : 'a';
+                    const strDay = (day < 10) ? '0' + day : day;
+                    const strHour = (hour < 10) ? '0' + hour : hour;
+                    const strMin = (minutes < 10) ? '0' + minutes : minutes;
 
                     return '' + month + '/' + strDay + ' ' + strHour + ':' + strMin + m;
                 }
@@ -96,25 +110,26 @@ const Message = HumanModel.define({
             deps: ['mine', 'type'],
             fn: function () {
                 if (this.type === 'groupchat') {
-                    return this.from.resource;
+                    return this.from?.resource;
                 }
                 if (this.mine) {
                     return 'me';
                 }
-                return me.getContact(this.from.bare).displayName;
+                return me.getContact(this.from?.bare)?.displayName;
             }
         },
         processedBody: {
             deps: ['body', 'meAction', 'mentions'],
             fn: function () {
-                var body = this.body;
+                let body = this.body ?? '';
                 if (this.meAction) {
                     body = body.substr(4);
                 }
                 body = htmlify.toHTML(body);
-                for (var i = 0; i < this.mentions.length; i++) {
-                    var existing = htmlify.toHTML(this.mentions[i]);
-                    var parts = body.split(existing);
+                if (!this.mentions) return;
+                for (let i = 0; i < this.mentions.length; i++) {
+                    const existing = htmlify.toHTML(this.mentions[i]);
+                    const parts = body.split(existing);
                     body = parts.join('<span class="mention">' + existing + '</span>');
                 }
                 return body;
@@ -131,17 +146,18 @@ const Message = HumanModel.define({
             deps: ['edited', 'pending', 'body', 'urls'],
             cache: false,
             fn: function () {
+                const model = { message: this, messageDate: Date.create(this.timestamp!), firstEl: true };
                 if (this.type === 'groupchat') {
-                    return templates.includes.mucWrappedMessage({message: this, messageDate: Date.create(this.timestamp), firstEl: true});
+                    return templates.includes.mucWrappedMessage(model);
                 } else {
-                    return templates.includes.wrappedMessage({message: this, messageDate: Date.create(this.timestamp), firstEl: true});
+                    return templates.includes.wrappedMessage(model);
                 }
             }
         },
         classList: {
             cache: false,
             fn: function () {
-                var res = [];
+                const res = [];
 
                 if (this.mine) res.push('mine');
                 if (this.pending) res.push('pending');
@@ -157,24 +173,25 @@ const Message = HumanModel.define({
         meAction: {
             deps: ['body'],
             fn: function () {
-                return this.body.indexOf('/me') === 0;
+                return this.body?.indexOf('/me') === 0;
             }
         },
         urls: {
             deps: ['body', 'oobURIs'],
             fn: function () {
-                var self = this;
-                var result = [];
-                var urls = htmlify.collectLinks(this.body);
-                var oobURIs = _.pluck(this.oobURIs || [], 'url');
-                var uniqueURIs = _.unique(result.concat(urls).concat(oobURIs));
+                const self = this;
+                const result: URI[] = [];
+                const urls = htmlify.collectLinks(this.body ?? '');
+                const emptyURIs: (string | undefined)[] = [];
+                const oobURIs = _.pluck(this.oobURIs || [], 'url');
+                const uniqueURIs = _.unique(emptyURIs.concat(urls).concat(oobURIs));
 
-                _.each(uniqueURIs, function (url) {
-                    var oidx = oobURIs.indexOf(url);
+                uniqueURIs.forEach(function (url) {
+                    const oidx = oobURIs.indexOf(url);
                     if (oidx >= 0) {
                         result.push({
                             href: url,
-                            desc: self.oobURIs[oidx].desc,
+                            desc: self.oobURIs ? self.oobURIs[oidx].desc : '',
                             source: 'oob'
                         });
                     } else {
@@ -188,7 +205,7 @@ const Message = HumanModel.define({
 
                 return result;
             }
-        }
+        },
     },
     session: {
         _created: 'date',
@@ -196,11 +213,11 @@ const Message = HumanModel.define({
         _mucMine: 'bool',
         receiptReceived: ['bool', true, false],
         edited: ['bool', true, false],
-        delay: 'object',
-        mentions: ['array', false, []]
+        delay: Delay,
+        mentions: ['array', false, [], 'string'],
     },
-    correct: function (msg) {
-        if (this.from.full !== msg.from.full) return false;
+    correct: function (msg: { from?: JID; id?: unknown }) {
+        if (this.from?.full !== msg.from?.full) return false;
 
         delete msg.id;
 
@@ -212,20 +229,21 @@ const Message = HumanModel.define({
 
         return true;
     },
-    bareMessageTemplate: function (firstEl) {
+    bareMessageTemplate: function (firstEl: any) {
+        const model = { message: this, messageDate: Date.create(this.timestamp!), firstEl: firstEl };
         if (this.type === 'groupchat') {
-            return templates.includes.mucBareMessage({message: this, messageDate: Date.create(this.timestamp), firstEl: firstEl});
+            return templates.includes.mucBareMessage(model);
         } else {
-            return templates.includes.bareMessage({message: this, messageDate: Date.create(this.timestamp), firstEl: firstEl});
+            return templates.includes.bareMessage(model);
         }
     },
     save: function () {
-        if (this.mid) {
-            var from = this.type == 'groupchat' ? this.from.full : this.from.bare;
-            Message.idStore(from, this.mid, this);
+        if (this.mid && this.from) {
+            const from = this.type === 'groupchat' ? this.from.full : this.from.bare;
+            idStore(from, this.mid, this);
         }
 
-        var data = {
+        const data = {
             archivedId: this.archivedId || uuid.v4(),
             owner: this.owner,
             to: this.to,
@@ -238,24 +256,30 @@ const Message = HumanModel.define({
         };
         app.storage.archive.add(data);
     },
-    shouldGroupWith: function (previous) {
+    shouldGroupWith: function (previous?: { from?: JID; created?: Date }) {
+        let fullOrBare: (jid: JID) => string
         if (this.type === 'groupchat') {
-            return previous && previous.from.full === this.from.full && Math.round((this.created - previous.created) / 1000) <= 300 && previous.created.toLocaleDateString() === this.created.toLocaleDateString();
+            fullOrBare = jid => jid.full;
         } else {
-            return previous && previous.from.bare === this.from.bare && Math.round((this.created - previous.created) / 1000) <= 300 && previous.created.toLocaleDateString() === this.created.toLocaleDateString();
+            fullOrBare = jid => jid.bare;
         }
+        return previous && previous.from && previous.created &&
+            this.from && this.created &&
+            fullOrBare(previous.from) === fullOrBare(this.from) &&
+            Math.round((this.created.valueOf() - previous.created.valueOf()) / 1000) <= 300 &&
+            previous.created.toLocaleDateString() === this.created.toLocaleDateString();
     }
 });
 
-Message.idLookup = function (jid, mid) {
-    var cache = ID_CACHE[jid] || (ID_CACHE[jid] = {});
-    return cache[mid];
+export const idLookup = function (jid: string, mid?: string) {
+    const cache = ID_CACHE[jid] || (ID_CACHE[jid] = {});
+    return cache[mid!];
 };
 
-Message.idStore = function (jid, mid, msg) {
-    var cache = ID_CACHE[jid] || (ID_CACHE[jid] = {});
+export const idStore = function (jid: string, mid: string, msg: any) {
+    const cache = ID_CACHE[jid] || (ID_CACHE[jid] = {});
     cache[mid] = msg;
 };
 
 export default Message;
-export type MessageType = typeof Message;
+export type MessageType = InstanceType<typeof Message>;

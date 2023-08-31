@@ -4,7 +4,6 @@ import SettingsPage from './pages/settings';
 import ChatPage from './pages/chat';
 import GroupChatPage from './pages/groupchat';
 
-
 const Router = Backbone.Router.extend({
     routes: {
         '': 'settings',
@@ -19,8 +18,8 @@ const Router = Backbone.Router.extend({
             model: me
         }));
     },
-    chat: function (jid) {
-        var contact = me.contacts.get(decodeURIComponent(jid));
+    chat: function (jid: string) {
+        const contact = me.contacts.get(decodeURIComponent(jid));
         if (contact) {
             app.renderPage(new ChatPage({
                 model: contact
@@ -29,8 +28,8 @@ const Router = Backbone.Router.extend({
             app.navigate('/');
         }
     },
-    groupchat: function (jid) {
-        var contact = me.mucs.get(decodeURIComponent(jid));
+    groupchat: function (jid: string) {
+        const contact = me.mucs.get(decodeURIComponent(jid));
         if (contact) {
             app.renderPage(new GroupChatPage({
                 model: contact
@@ -44,8 +43,8 @@ const Router = Backbone.Router.extend({
             client.disconnect();
         }
         localStorage.clear();
-        window.location = 'login.html';
-    }
+        app.whenDisconnected();
+    },
 });
 
 export default Router;

@@ -1,10 +1,22 @@
 
+import Storage from './index'
+import { LegacyEntityCaps } from 'stanza/protocol';
+
+type DiscoId = string;
+
+export type Disco = {
+    ver: DiscoId;
+    caps: LegacyEntityCaps[];
+}
+
+type Cb = ((err: string | Event | null, res?: Disco) => void) | null;
+
 class DiscoStorage {
-    private storage: any;
-    constructor(storage: any) {
+    private storage: Storage;
+    constructor(storage: Storage) {
         this.storage = storage;
     };
-    setup(db) {
+    setup(db: IDBDatabase) {
         if (db.objectStoreNames.contains('disco')) {
             db.deleteObjectStore('disco');
         }
@@ -12,38 +24,35 @@ class DiscoStorage {
             keyPath: 'ver'
         });
     };
-    transaction(mode) {
-        var trans = this.storage.db.transaction('disco', mode);
+    transaction(mode: IDBTransactionMode) {
+        const trans = this.storage.db.transaction('disco', mode);
         return trans.objectStore('disco');
     };
-    add(ver, disco, cb) {
-        cb = cb || function () {};
-        var data = {
-            ver: ver,
-            disco: disco
+    add(disco: LegacyEntityCaps[], cb?: Cb) {
+        cb = cb || function () { };
+        const data = {
+            ver: '1',
+            caps: disco,
         };
-        var request = this.transaction('readwrite').put(data);
+        const request = this.transaction('readwrite').put(data);
         request.onsuccess = function () {
-            cb(false, data);
+            cb!(null, data);
         };
         request.onerror = cb;
     };
-    get(ver, cb) {
-        cb = cb || function () {};
-        if (!ver) {
-            return cb('not-found');
-        }
-        var request = this.transaction('readonly').get(ver);
+    get(cb?: Cb) {
+        cb = cb || function () { };
+        const ver = '1';
+        const request = this.transaction('readonly').get(ver);
         request.onsuccess = function (e) {
-            var res = request.result;
+            const res = request.result;
             if (res === undefined) {
-                return cb('not-found');
+                return cb!('not-found');
             }
-            cb(false, res.disco);
+            cb!(null, request.result);
         };
         request.onerror = cb;
     };
 };
-
 
 export default DiscoStorage;

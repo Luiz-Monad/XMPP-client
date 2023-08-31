@@ -1,14 +1,21 @@
+import Storage from './index'
 
-// SCHEMA
-//    id: 'sha1 hash',
-//    dataURI: '...'
+type AvatarId = string; //sha1 hash
+
+export type Avatar = {
+    id: AvatarId;
+    type: string;
+    uri: string;
+}
+
+type Cb = ((err: string | Event | null, res?: Avatar) => void) | null;
 
 class AvatarStorage {
-    private storage: any;
-    constructor(storage: any) {
+    private storage: Storage;
+    constructor(storage: Storage) {
         this.storage = storage;
     };
-    setup(db) {
+    setup(db: IDBDatabase) {
         if (db.objectStoreNames.contains('avatars')) {
             db.deleteObjectStore('avatars');
         }
@@ -16,42 +23,41 @@ class AvatarStorage {
             keyPath: 'id'
         });
     };
-    transaction(mode) {
-        var trans = this.storage.db.transaction('avatars', mode);
+    transaction(mode: IDBTransactionMode) {
+        const trans = this.storage.db.transaction('avatars', mode);
         return trans.objectStore('avatars');
     };
-    add(avatar, cb) {
-        cb = cb || function () {};
-        var request = this.transaction('readwrite').put(avatar);
+    add(avatar: Avatar, cb?: Cb) {
+        cb = cb || function () { };
+        const request = this.transaction('readwrite').put(avatar);
         request.onsuccess = function () {
-            cb(false, avatar);
+            cb!(null, avatar);
         };
         request.onerror = cb;
     };
-    get(id, cb) {
-        cb = cb || function () {};
+    get(id?: AvatarId, cb?: Cb) {
+        cb = cb || function () { };
         if (!id) {
-            return cb('not-found');
+            return cb!('not-found');
         }
-        var request = this.transaction('readonly').get(id);
+        const request = this.transaction('readonly').get(id);
         request.onsuccess = function (e) {
-            var res = request.result;
+            const res = request.result;
             if (res === undefined) {
-                return cb('not-found');
+                return cb!('not-found');
             }
-            cb(false, request.result);
+            cb!(null, request.result);
         };
         request.onerror = cb;
     };
-    remove(id, cb) {
-        cb = cb || function () {};
-        var request = this.transaction('readwrite')['delete'](id);
+    remove(id: AvatarId, cb?: Cb) {
+        cb = cb || function () { };
+        const request = this.transaction('readwrite').delete(id);
         request.onsuccess = function (e) {
-            cb(false, request.result);
+            cb!(null, request.result);
         };
         request.onerror = cb;
     };
 };
-
 
 export default AvatarStorage;

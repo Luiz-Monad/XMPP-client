@@ -3,7 +3,7 @@ import { MeType } from '../models/me';
 import BasePage from './base';
 import templates from 'templates';
 
-const SettingsPage = BasePage.define<MeType>().extend({
+const SettingsPage = BasePage.extend<MeType>().extend({
     template: templates.pages.settings,
     classBindings: {
         shouldAskForAlertsPermission: '.enableAlerts',

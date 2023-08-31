@@ -4,7 +4,7 @@ import HumanView from 'human-view';
 import templates from 'templates';
 import { ResourceType } from '../models/resource';
 
-export default HumanView.define<ResourceType>().extend({
+export default HumanView.extend<ResourceType>().extend({
     template: templates.includes.mucRosterItem,
     events: {
         'click': 'handleClick',

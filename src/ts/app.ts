@@ -88,7 +88,7 @@ export class App {
             },
             function (cb) {
                 app.state = new State();
-                me = window['me'] = new Me(profile);
+                window['me'] = new Me(profile);
 
                 window.onbeforeunload = function () {
                     if (client.sessionStarted) {
@@ -96,7 +96,7 @@ export class App {
                     }
                 };
 
-                client = window['client'] = StanzaIO.createClient(app.config);
+                window['client'] = StanzaIO.createClient(app.config);
                 client.use(pushNotifications);
                 xmppEventHandlers(client, self);
 
@@ -191,7 +191,8 @@ export class App {
         return SERVER_CONFIG;
     }
 }
-app = new App();
+
+const app = new App();
 
 $(() => app.launch());
 

@@ -6,7 +6,7 @@ import MUCListItem from '../views/mucListItem';
 import ContactRequestItem from '../views/contactRequest';
 import { StateType } from '../models/state';
 
-export default HumanView.define<StateType>().extend({
+export default HumanView.extend<StateType>().extend({
     template: templates.body,
     initialize: function () {
         this.listenTo(app.state, 'change:title', this.handleTitle);

@@ -1,5 +1,6 @@
 const webpack = require('webpack');
 const path = require('path');
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 module.exports = (env, argv) => {
     const mode = argv.mode;
@@ -15,12 +16,8 @@ module.exports = (env, argv) => {
                 os: require.resolve('os-browserify'),
                 stream: require.resolve('stream-browserify'),
                 fs: false,
-                'mock-aws-s3': false,
-                'aws-sdk': false,
-                nock: false,
                 util: false,
                 assert: false,
-                child_process: false,
             },
             alias: {
                 'parselinks': path.resolve(__dirname, './src/js/libraries/parselinks.js'),
@@ -55,12 +52,12 @@ module.exports = (env, argv) => {
                 _: 'underscore',
                 $: 'jquery',
                 jQuery: 'jquery',
-                Buffer: ['buffer', 'Buffer'],
                 jQueryOem: path.join(__dirname, './src/js/libraries/jquery.oembed.js'),
             }),
             new webpack.LoaderOptionsPlugin({
                 debug: true
             }),
+            new NodePolyfillPlugin(),
         ],
 
         mode: mode,
@@ -71,7 +68,7 @@ module.exports = (env, argv) => {
             splitChunks: {
                 chunks: 'all',
                 name(module, chunks, cacheGroupKey) {
-                    const allChunksNames = chunks.map((item) => item.name).join('~');
+                    const allChunksNames = chunks[0].name;
                     return `${cacheGroupKey}-${allChunksNames}`;
                 },
                 cacheGroups: {

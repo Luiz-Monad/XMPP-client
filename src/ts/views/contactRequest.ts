@@ -4,7 +4,7 @@ import HumanView from 'human-view';
 import templates from 'templates';
 import { ContactType } from '../models/contact';
 
-export default HumanView.define<ContactType>().extend({
+export default HumanView.extend<ContactType>().extend({
     template: templates.includes.contactRequest,
     initialize: function (opts: unknown) {
         this.render();

@@ -5,7 +5,7 @@ import templates from 'templates';
 import { CallType } from '../models/call';
 import { ContactType } from '../models/contact';
 
-export default HumanView.define<CallType>().extend({
+export default HumanView.extend<CallType>().extend({
     template: templates.includes.call,
     classBindings: {
         state: '',

@@ -11,7 +11,7 @@ import { ContactType } from '../models/contact';
 import { ChatState } from 'stanza/Constants';
 import { ResourceType } from '../models/resource';
 
-const ChatPage = BasePage.define<ContactType>().extend({
+const ChatPage = BasePage.extend<ContactType>().extend({
     template: templates.pages.chat,
     initialize: function (spec: unknown) {
         this.editMode = false;

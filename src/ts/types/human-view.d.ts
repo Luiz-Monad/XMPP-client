@@ -107,7 +107,7 @@ declare module 'human-view' {
 
         prototype: HumanView<Model> & BaseProps & BaseStaticProps;
 
-        define<
+        extend<
             Model extends Backbone.Model<any> = Backbone.Model<any>
         >(): HumanViewConstructor<Model,
             BaseProps, BaseStaticProps>;

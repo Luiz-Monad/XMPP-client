@@ -4,7 +4,7 @@ import HumanView from 'human-view';
 import templates from 'templates';
 import { MessageType } from '../models/message';
 
-export default HumanView.define<MessageType>().extend({
+export default HumanView.extend<MessageType>().extend({
     template: templates.includes.message,
     initialize: function (opts: unknown) {
         this.render();

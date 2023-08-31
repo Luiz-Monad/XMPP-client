@@ -1,7 +1,6 @@
 
 import _ from 'underscore';
 import async from 'async';
-import bows from 'bows';
 import LocalMedia from 'localmedia';
 import Contact from '../models/contact';
 import Resource from '../models/resource';
@@ -12,9 +11,26 @@ import unpromisify from './unpromisify';
 import { JID } from '../models/jid';
 import { App } from '../app';
 
-const log = bows('Otalk');
-const ioLogIn = bows('<< in');
-const ioLogOut = bows('>> out');
+function createLogger(name: string) {
+    return {
+        info: function (str: string) {
+            console.info(`${name}: ${str}`);
+        },
+        warn: function (str: string) {
+            console.warn(`${name}: ${str}`);
+        },
+        error: function (str: string) {
+            console.error(`${name}: ${str}`);
+        },
+        debug: function (str: string) {
+            console.debug(`${name}: ${str}`);
+        }
+    };
+}
+
+const log = createLogger('Otalk');
+const ioLogIn = createLogger('<< in');
+const ioLogOut = createLogger('>> out');
 
 declare module 'stanza' {
 

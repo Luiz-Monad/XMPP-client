@@ -35,7 +35,7 @@ const State = HumanModel.define({
         hasActiveCall: ['boolean', false, false],
         deviceID: ['string', false, ''],
         pageChanged: ['string', false, ''],
-        idleTimer: NodeJS.Timeout,
+        idleTimer: 'number',
     },
     derived: {
         title: {
@@ -66,7 +66,7 @@ const State = HumanModel.define({
         this.active = true;
         this.idleSince = new Date(Date.now());
 
-        this.idleTimer = setTimeout(this.markInactive.bind(this), this.idleTimeout);
+        this.idleTimer = setTimeout(this.markInactive.bind(this), this.idleTimeout) as any;
     },
     markInactive: function () {
         if (this.focused) {

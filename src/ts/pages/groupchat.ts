@@ -15,7 +15,7 @@ import { ContactType } from '../models/contact';
 
 let tempSubject = '';
 
-const GroupChatPage = BasePage.define<MUCType>().extend({
+const GroupChatPage = BasePage.extend<MUCType>().extend({
     template: templates.pages.groupchat,
     initialize: function (spec: unknown) {
         this.editMode = false;

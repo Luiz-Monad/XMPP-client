@@ -24,7 +24,9 @@ module.exports = {
     context: path.join(__dirname, './src/ts'),
 
     entry: {
-        'app': './app.ts'
+        'app': './app.ts',
+        'login': './login.ts',
+        'logout': './logout.ts',
     },
 
     output: {

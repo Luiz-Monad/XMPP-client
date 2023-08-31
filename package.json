@@ -31,6 +31,7 @@
     "human-view": "^1.8.0",
     "indexeddbshim": "^13.0.0-pre.1",
     "jquery": "^3.7.0",
+    "localmedia": "^5.2.0",
     "lodash": "^4.17.21",
     "node-uuid": "^1.4.8",
     "notify.js": "^0.0.3",

@@ -13,7 +13,6 @@
       "name": "Kaiwa",
       "domain": "example.com",
       "wss": "wss://localhost:5280/xmpp-websocket/",
-      "sasl": "scram-sha-1",
       "securePasswordStorage": true,
       "muc": "chat.example.com",
       "startup": "http://localhost:5280",

@@ -3518,6 +3518,11 @@ get-value@^2.0.3, get-value@^2.0.6:
   resolved "https://registry.yarnpkg.com/get-value/-/get-value-2.0.6.tgz#dc15ca1c672387ca76bd37ac0a395ba2042a2c28"
   integrity sha512-Ln0UQDlxH1BapMu3GPtf7CuYNwRZf2gwCuPqbyG6pB8WfmFpzqcy4xtAaAMUhnNqjMKTiCPZG2oMT3YSx8U2NA==
 
+getscreenmedia@^5.1.2:
+  version "5.1.2"
+  resolved "https://registry.yarnpkg.com/getscreenmedia/-/getscreenmedia-5.1.2.tgz#39778de5f58d0a1a664175e504badafc3895e50a"
+  integrity sha512-IFdLX1oV1/nMDWajgok7pgkAH2ayY7wDx3jNBaSyRQfB2GAALkD1RoK0SlPkElLXKwMLV/F5jXZWz5Ic+xWjcA==
+
 getusermedia@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/getusermedia/-/getusermedia-2.0.1.tgz#f81af9795bc5934649813f7d092dd65030b34655"
@@ -3833,6 +3838,13 @@ gulplog@^1.0.0:
   integrity sha512-hm6N8nrm3Y08jXie48jsC55eCZz9mnb4OirAStEk2deqeyhXU3C1otDVh+ccttMuc1sBi6RX6ZJ720hs9RCvgw==
   dependencies:
     glogg "^1.0.0"
+
+hark@^1.0.0:
+  version "1.2.3"
+  resolved "https://registry.yarnpkg.com/hark/-/hark-1.2.3.tgz#959981400f561be5580ecd4321a9f55b16bacbd0"
+  integrity sha512-u68vz9SCa38ESiFJSDjqK8XbXqWzyot7Cj6Y2b6jk2NJ+II3MY2dIrLMg/kjtIAun4Y1DHF/20hfx4rq1G5GMg==
+  dependencies:
+    wildemitter "^1.2.0"
 
 has-ansi@^2.0.0:
   version "2.0.0"
@@ -4682,6 +4694,16 @@ loader-utils@^1.1.0:
     emojis-list "^3.0.0"
     json5 "^1.0.1"
 
+localmedia@^5.2.0:
+  version "5.2.0"
+  resolved "https://registry.yarnpkg.com/localmedia/-/localmedia-5.2.0.tgz#6a15b4da14cf4313d1ec0903eea0bbe849d522fb"
+  integrity sha512-nXc3QtbUprxUDjJ3X0xTVoFSlKh4E7OPLhwVkKcGYddPEqaRLve7w9EFfl8qnypSBrrHFkMD4TwGuCX3alnLng==
+  dependencies:
+    getscreenmedia "^5.1.2"
+    hark "^1.0.0"
+    mockconsole "0.0.x"
+    wildemitter "^1.0.0"
+
 locate-path@^5.0.0:
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/locate-path/-/locate-path-5.0.0.tgz#1afba396afd676a6d42504d0a67a3a7eb9f62aa0"
@@ -5210,6 +5232,11 @@ mkdirp@~0.5.0:
   integrity sha512-FP+p8RB8OWpF3YZBCrP5gtADmtXApB5AMLn+vdyA+PyxCjrCs00mjyUozssO33cwDeT3wNGdLxJ5M//YqtHAJw==
   dependencies:
     minimist "^1.2.6"
+
+mockconsole@0.0.x:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/mockconsole/-/mockconsole-0.0.1.tgz#d62a7ed85530964abcd24edb9f30fa58bbce56c6"
+  integrity sha512-9wFq0SJFTaxxEYmfjWf4U8uYku5HKwn3OsTOct3aQFLDois6HrLse2iZAy7v5hyTNts2XH6Y1LW8iMXWxiH6Vg==
 
 ms@2.0.0:
   version "2.0.0"
@@ -7848,6 +7875,11 @@ wildcard@^2.0.0:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/wildcard/-/wildcard-2.0.1.tgz#5ab10d02487198954836b6349f74fff961e10f67"
   integrity sha512-CC1bOL87PIWSBhDcTrdeLo6eGT7mCFtrg0uIJtqJUFyK+eJnzl8A1niH56uu7KMa5XFrtiV+AQuHO3n7DsHnLQ==
+
+wildemitter@^1.0.0, wildemitter@^1.2.0:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/wildemitter/-/wildemitter-1.2.1.tgz#9da3b5ca498e4378628d1783145493c70a10b774"
+  integrity sha512-UMmSUoIQSir+XbBpTxOTS53uJ8s/lVhADCkEbhfRjUGFDPme/XGOb0sBWLx5sTz7Wx/2+TlAw1eK9O5lw5PiEw==
 
 window-size@0.1.0:
   version "0.1.0"

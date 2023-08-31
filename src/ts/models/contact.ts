@@ -41,6 +41,7 @@ const Contact = HumanModel.define({
         owner: ['string', true, ''],
         storageId: ['string', true, ''],
         subscription: ['string', false, 'none'],
+        joined: 'boolean',
     },
     session: {
         activeContact: ['bool', false, false],

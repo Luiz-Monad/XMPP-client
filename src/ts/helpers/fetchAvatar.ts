@@ -1,11 +1,10 @@
 
 import crypto from 'crypto';
 import unpromisify from './unpromisify';
-import { VCardTempRecord } from 'stanza/protocol';
 import { Avatar } from '../storage/avatars';
 
 
-export type VCardType = VCardTempRecord['type'];
+export type VCardType = string;
 export type VCardSource = 'vcard' | 'pubsub';
 
 function fallback(jid: string): Partial<Avatar> {
@@ -49,7 +48,7 @@ export default function (
                     const rec = resp.records ? resp.records[0] : null;
                     if (!rec || rec.type !== 'photo') return cb(fallback(jid));
 
-                    type = rec.type || type || 'photo';
+                    type = rec.mediaType || type!;
 
                     const data = rec.data;
                     const uri = 'data:' + type + ';base64,' + data;
@@ -74,7 +73,7 @@ export default function (
 
                     avatar = {
                         id: id,
-                        type: type ?? 'pubsub',
+                        type: type!,
                         uri: uri
                     };
 

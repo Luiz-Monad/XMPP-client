@@ -21,7 +21,7 @@ import unpromisify from './helpers/unpromisify';
 import HumanView from 'human-view';
 
 export class App {
-    config: any;
+    config: StanzaIO.AgentConfig = <StanzaIO.AgentConfig>{};
     notifications: Notify = <Notify>{};
     soundManager: typeof SoundEffectManager;
     storage: AppStorage = <AppStorage>{};
@@ -64,10 +64,6 @@ export class App {
         app.config = parseConfig(config);
         app.config.useStreamManagement = false; // Temporary solution because this feature is bugged on node 4.0
 
-        if (SERVER_CONFIG.sasl) {
-            app.config.sasl = SERVER_CONFIG.sasl;
-        }
-
         _.extend(this, Backbone.Events);
 
         let profile: Profile = {} as Profile;
@@ -84,7 +80,7 @@ export class App {
                 app.storage.profiles.get(app.config.jid, function (err, res) {
                     if (res) {
                         profile = res;
-                        profile.jid = app.config.jid;
+                        profile.jid = app.config.jid ?? '';
                         app.config.rosterVer = res.rosterVer;
                     }
                     cb();
@@ -137,7 +133,7 @@ export class App {
 
                 function start() {
                     // start our router and show the appropriate page
-                    const baseUrl = url.parse(SERVER_CONFIG.baseUrl)
+                    const baseUrl = url.parse(SERVER_CONFIG.baseUrl ?? '')
                     app.history.start({ pushState: false, root: baseUrl.pathname! })
                     if ('fragment' in app.history && app.history.fragment === '' && SERVER_CONFIG.startup)
                         app.navigate(SERVER_CONFIG.startup)

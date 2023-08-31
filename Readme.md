@@ -58,11 +58,6 @@ be made. After that, the Kaiwa client should connect fine.
 
 Application configuration is taken from `dev_config.json` file.
 
-`server.sasl` is optional parameter that can be used to configure the
-authentication scheme. It can be a single string or a priority list. The default
-priorities as defined by [stanza.io][] are `['external', 'scram-sha-1',
-'digest-md5', 'plain', 'anonymous']`.
-
 You may enable XMPP pings by setting the `server.keepalive.interval` (time
 between ping attempts) and `server.keepalive.timeout` (timeout to close the
 connection if pong was not received); both of these are in seconds. If

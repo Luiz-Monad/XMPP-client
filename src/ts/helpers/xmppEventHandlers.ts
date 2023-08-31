@@ -2,6 +2,7 @@
 import _ from 'underscore';
 import async from 'async';
 import bows from 'bows';
+import LocalMedia from 'localmedia';
 import Contact from '../models/contact';
 import Resource from '../models/resource';
 import Message, { idLookup } from '../models/message';
@@ -26,9 +27,9 @@ declare module 'stanza' {
 
 }
 
-const discoCapsQueue = async.queue(function (pres: AgentEvents['disco:caps'], cb: () => void) {
-    const jid = pres.jid;
-    const caps = pres.caps;
+const discoCapsQueue = async.queue(function (disco: AgentEvents['iq:get:disco'], cb: () => void) {
+    const jid = disco.from;
+    const caps = disco.disco;
 
     log.info('Checking storage for caps');
 
@@ -37,67 +38,55 @@ const discoCapsQueue = async.queue(function (pres: AgentEvents['disco:caps'], cb
 
     app.storage.disco.get(function (err, existing) {
         if (existing) {
-            log.info('Already found info for ' + caps.ver);
-            if (resource) resource.discoInfo = existing;
+            log.info('Already found info from' + jid);
+            if (resource) resource.discoInfo = { features: existing.features };
             return cb();
         }
-        log.info('getting info for ' + caps.ver + ' from ' + jid);
-        unpromisify(client.getDiscoInfo)(jid, caps.node + '#' + caps.ver, function (err, result) {
-            if (err || !result.discoInfo.features) {
-                log.info('Couldnt get info for ' + caps.ver);
+        log.info('getting info from ' + jid);
+        unpromisify(client.getDiscoInfo)(jid, caps.node, function (err, result) {
+            if (err || !result.features) {
+                log.info('Couldnt get info from ' + jid);
                 return cb();
             }
-            if (client.verifyVerString(result.discoInfo, caps.hash, caps.ver)) {
-                log.info('Saving info for ' + caps.ver);
-                app.storage.disco.add(caps, function () {
-                    if (resource) resource.discoInfo = data;
-                    cb();
-                });
-            } else {
-                log.info('Couldnt verify info for ' + caps.ver + ' from ' + jid);
+            app.storage.disco.add(result.features, function () {
+                if (resource) resource.discoInfo = { features: result.features };
                 cb();
-            }
+            });
         });
     });
 });
 
 
 export default function (client: StanzaIO.Agent, app: App) {
+    let localmedia: LocalMedia | null;
 
-    client.on('*', function (name, data) {
-        if (name === 'raw:incoming') {
-            ioLogIn.debug(data.toString());
-        } else if (name === 'raw:outgoing') {
-            ioLogOut.debug(data.toString());
-        }
+    client.on('raw:incoming', function (data) {
+        ioLogIn.debug(data.toString());
+    });
+
+    client.on('raw:outgoing', function (data) {
+        ioLogOut.debug(data.toString());
     });
 
     client.on('credentials:update', function (creds) {
         client.config.credentials = creds;
-        if (!client.config.saveCredentials) {
+        if (!client.config.credentials) {
             delete localStorage.config;
             return;
         }
 
         if (SERVER_CONFIG.securePasswordStorage) {
-            if (creds.clientKey && creds.serverKey) {
+            if (creds.username && creds.password) {
+                delete creds.username;
                 delete creds.password;
+            } else if ('saltedPassword' in creds) {
+                creds as StanzaIO.SASL.CacheableCredentials;
                 delete creds.saltedPassword;
-            } else if (creds.saltedPassword) {
-                delete creds.password;
             }
-        } else {
-            creds = {
-                password: creds.password
-            };
         }
 
         localStorage.config = JSON.stringify({
-            jid: client.config.jid.bare,
-            server: client.config.server,
-            wsURL: client.config.wsURL,
-            transports: client.config.transports,
-            saveCredentials: client.config.saveCredentials,
+            ...JSON.parse(localStorage.config!),
             credentials: creds
         });
     });
@@ -127,7 +116,6 @@ export default function (client: StanzaIO.Agent, app: App) {
         me.updateJid(JID.parse(jid));
 
         app.state.connected = true;
-        window.readyForDeviceID = true;
 
         unpromisify(client.getRoster)(function (err, resp) {
             if (resp && resp.items && resp.items.length) {
@@ -143,7 +131,8 @@ export default function (client: StanzaIO.Agent, app: App) {
 
             const caps = client.updateCaps();
             if (caps) {
-                app.storage.disco.add(caps, function () {
+                const features = client.getCurrentCaps()?.info?.features ?? [];
+                app.storage.disco.add(features, function () {
                     client.sendPresence({
                         status: me.status,
                         legacyCapabilities: Object.values(client.disco.caps),
@@ -154,6 +143,8 @@ export default function (client: StanzaIO.Agent, app: App) {
 
             me.mucs.fetch();
         });
+
+        client.discoverICEServers();
 
         const keepalive = SERVER_CONFIG.keepalive;
         if (keepalive) {
@@ -186,37 +177,38 @@ export default function (client: StanzaIO.Agent, app: App) {
         });
     });
 
-    client.on('available', function (pres) {
-        const contact = me.getContact(pres.from);
+    client.on('available', function (presence) {
+        const contact = me.getContact(presence.from);
         if (contact) {
-            delete pres.id;
-            pres.show = pres.show || '';
-            pres.status = pres.status || '';
-            pres.priority = pres.priority || 0;
+            delete presence.id;
+            const pres = {
+                ...presence,
+                show: presence.show || '',
+                status: presence.status || '',
+                priority: presence.priority || 0,
+            };
 
-
-            const resource = contact.resources.get(pres.from);
+            let resource = contact.resources.get(pres.from);
             if (resource) {
-                pres.from = pres.from.full;
                 // Explicitly set idleSince to null to clear
                 // the model's value.
                 if (!pres.idleSince) {
-                    pres.idleSince = null;
+                    resource.set('idleSince', null);
                 }
                 resource.set(pres);
             } else {
                 resource = new Resource(pres);
-                resource.id = pres.from.full;
+                resource.id = pres.from;
                 contact.resources.add(resource);
 
-                if (!pres.caps) {
+                if (!pres.legacyCapabilities) {
                     resource.fetchDisco();
                 }
                 resource.fetchTimezone();
             }
 
-            const muc = pres.muc || {};
-            if (muc.codes && muc.codes.indexOf('110') >= 0) {
+            const muc = pres.muc!;
+            if (muc.type === 'info' && muc.statusCodes && muc.statusCodes.indexOf('110') >= 0) {
                 contact.joined = true;
             }
         }
@@ -237,18 +229,21 @@ export default function (client: StanzaIO.Agent, app: App) {
                 contact.resources.remove(resource);
             }
 
-            const muc = pres.muc || {};
-            if (muc.type === 'info' && muc.codes && muc.codes.indexOf('110') >= 0) {
+            const muc = pres.muc!;
+            if (muc.type === 'info' && muc.statusCodes && muc.statusCodes.indexOf('110') >= 0) {
                 contact.joined = false;
             }
         }
     });
 
     client.on('avatar', function (info) {
-        let contact = me.getContact(info.jid);
+        const contact = me.getContact(info.jid)!;
+        let setAvatar = contact.setAvatar;
+        let ctype = contact.type;
         if (!contact) {
             if (me.isMe(info.jid)) {
-                contact = me;
+                setAvatar = me.setAvatar;
+                ctype = 'me';
             } else {
                 return;
             }
@@ -261,28 +256,28 @@ export default function (client: StanzaIO.Agent, app: App) {
             type = info.avatars[0].mediaType || 'image/png';
         }
 
-        if (contact.type === 'muc') {
-            const resource = contact.resources.get(info.jid.full);
+        if (ctype === 'muc') {
+            const resource = contact.resources.get(info.jid);
             if (resource) {
                 resource.setAvatar(id, type, info.source);
             }
         }
 
-        if (contact.setAvatar) {
-            contact.setAvatar(id, type, info.source);
+        if (setAvatar) {
+            setAvatar(id, type, info.source);
         }
     });
 
-    client.on('chatState', function (info) {
-        const contact = me.getContact(info.from);
+    client.on('chat:state', function (info) {
+        let contact = me.getContact(info.from);
         if (contact) {
-            const resource = contact.resources.get(info.from.full);
+            const resource = contact.resources.get(info.from);
             if (resource) {
                 resource.chatState = info.chatState;
                 if (info.chatState === 'gone') {
                     contact.lockedResource = undefined;
                 } else {
-                    contact.lockedResource = info.from.full;
+                    contact.lockedResource = info.from;
                 }
             }
         } else if (me.isMe(info.from)) {
@@ -304,44 +299,40 @@ export default function (client: StanzaIO.Agent, app: App) {
             const message = new Message(msg);
             message.mid = mid;
 
-            if (msg.archived) {
-                msg.archived.forEach(function (archived) {
-                    if (me.isMe(archived.by)) {
-                        message.archivedId = archived.id;
-                    }
-                });
+            if (msg.archive) {
+                if (me.isMe(msg.archive.item.message?.from)) {
+                    message.archivedId = msg.archive.id;
+                }
             }
 
-            if (msg.carbon)
-                msg.delay.stamp = new Date(Date.now() + app.timeInterval);
+            if (msg.carbon && msg.delay)
+                msg.delay.timestamp = new Date(Date.now() + app.timeInterval);
 
             message.acked = true;
             const localTime = new Date(Date.now() + app.timeInterval);
-            const notify = Math.round((localTime - message.created) / 1000) < 5;
+            const notify = Math.round((localTime.getMilliseconds() - (message.created?.getMilliseconds() ?? 0)) / 1000) < 5;
             contact.addMessage(message, notify);
-            if (msg.from.bare == contact.jid.bare) {
-                contact.lockedResource = msg.from.full;
+            if (msg.from == contact.jid) {
+                contact.lockedResource = msg.from;
             }
         }
     });
 
     client.on('groupchat', function (msg) {
-        msg.mid = msg.id;
+        const mid = msg.id;
         delete msg.id;
 
         const contact = me.getContact(msg.from, msg.to);
         if (contact && !msg.replace) {
             const message = new Message(msg);
+            message.mid = mid;
             message.acked = true;
             const localTime = new Date(Date.now() + app.timeInterval);
-            const notify = Math.round((localTime - message.created) / 1000) < 5;
+            const notify = Math.round((localTime.getMilliseconds() - (message.created?.getMilliseconds() ?? 0)) / 1000) < 5;
             contact.addMessage(message, notify);
         }
-    });
 
-    client.on('muc:subject', function (msg) {
-        const contact = me.getContact(msg.from, msg.to);
-        if (contact) {
+        if (contact && msg.subject && 'subject' in contact) {
             contact.subject = msg.subject === 'true' ? '' : msg.subject;
         }
     });
@@ -365,7 +356,7 @@ export default function (client: StanzaIO.Agent, app: App) {
         const contact = me.getContact(msg.from, msg.to);
         if (!contact) return;
 
-        const original = idLookup(msg.to, msg.receipt);
+        const original = idLookup(msg.to, msg.receipt.id);
 
         if (!original) return;
 
@@ -374,15 +365,17 @@ export default function (client: StanzaIO.Agent, app: App) {
 
     client.on('message:sent', function (msg) {
         if (msg.carbon) {
-            msg.delay.stamp = new Date(Date.now() + app.timeInterval);
+            if (msg.delay)
+                msg.delay.timestamp = new Date(Date.now() + app.timeInterval);
 
-            client.emit('message', msg);
+            const m = { ...msg, to: msg.to!, from: msg.from! };
+            client.emit('message', m);
         }
     });
 
-    client.on('disco:caps', function (pres) {
-        log.info('Caps from ' + pres.jid);
-        discoCapsQueue.push(pres);
+    client.on('iq:get:disco', function (disco) {
+        log.info('Caps from ' + disco.from);
+        discoCapsQueue.push(disco);
     });
 
     client.on('stanza:acked', function (stanza) {
@@ -398,8 +391,22 @@ export default function (client: StanzaIO.Agent, app: App) {
     });
 
     client.on('jingle:incoming', function (session) {
-        session.addStream(localMedia.localStream);
-        session.accept();
+        if (!localmedia) {
+            localmedia = new LocalMedia();
+            localmedia.start({}, function (err, stream) {
+                if (err) {
+                    session.end('decline');
+                }
+            });
+        }
+        if ('addTrack' in session) {
+            const media = session as StanzaIO.Jingle.MediaSession;
+            for (const stream of localmedia.localStreams) {
+                for (const track of stream.getTracks()) {
+                    media.addTrack(track, stream);
+                }
+            }
+        }
 
         let contact = me.getContact(session.peerID);
         if (!contact) {
@@ -411,12 +418,14 @@ export default function (client: StanzaIO.Agent, app: App) {
         const call = new Call({
             contact: contact,
             state: 'incoming',
-            jingleSession: session
+            sid: session.sid,
         });
         contact.jingleCall = call;
         contact.callState = 'incoming';
         me.calls.add(call);
-        // FIXME: send directed presence if not on roster
+
+        client.sendPresence({ to: session.peerID });
+        session.accept();
     });
 
     client.on('jingle:outgoing', function (session) {
@@ -425,7 +434,7 @@ export default function (client: StanzaIO.Agent, app: App) {
         const call = new Call({
             contact: contact,
             state: 'outgoing',
-            jingleSession: session
+            sid: session.sid,
         });
         contact.jingleCall = call;
         me.calls.add(call);
@@ -435,10 +444,11 @@ export default function (client: StanzaIO.Agent, app: App) {
         const contact = me.getContact(session.peerID);
         if (!contact) return;
         contact.callState = '';
-        contact.jingleCall = null;
+        contact.set('jingleCall', null);
         contact.onCall = false;
         if (me.calls.length == 1) { // this is the last call
-            client.stopLocalMedia();
+            localmedia?.stop();
+            localmedia = null;
         }
     });
 
@@ -449,27 +459,18 @@ export default function (client: StanzaIO.Agent, app: App) {
         contact.onCall = true;
     });
 
-    client.on('jingle:localstream:added', function (stream) {
+    client.jingle.on('peerTrackAdded', function (session: MediaSession, track: MediaStreamTrack, stream: MediaStream) {
         me.stream = stream;
     });
 
-    client.on('jingle:localstream:removed', function () {
-        me.stream = null;
+    client.jingle.on('peerTrackRemoved', function (session: MediaSession, track: MediaStreamTrack, stream: MediaStream) {
+        me.set('stream', null);
     });
 
-    client.on('jingle:remotestream:added', function (session) {
-        const contact = me.getContact(session.peer);
-        if (!contact) {
-            contact.resources.add({ id: session.peer });
-            me.contacts.add(contact);
-        }
-        contact.stream = session.streams[0];
-    });
-
-    client.on('jingle:remotestream:removed', function (session) {
+    client.on('jingle:terminated', function (session) {
         const contact = me.getContact(session.peerID);
         if (!contact) return;
-        contact.stream = null;
+        contact.set('stream', null);
     });
 
     client.on('jingle:ringing', function (session) {
@@ -478,5 +479,34 @@ export default function (client: StanzaIO.Agent, app: App) {
         contact.callState = 'ringing';
     });
 
-    localMedia.start();
+    client.call = function (jid) {
+        if (!localmedia) {
+            localmedia = new LocalMedia();
+            localmedia.start();
+        }
+        var sess = client.jingle.createMediaSession(jid);
+        for (const stream of localmedia.localStreams) {
+            for (const track of stream.getTracks()) {
+                sess.addTrack(track, stream);
+            }
+        }
+        sess.start();
+        // sess.ring();
+    };
+
+    client.acceptCall = function (sid) {
+        var sess = client.jingle.sessions[sid];
+        sess.accept();
+    };
+
+    client.declineCall = function (sid) {
+        var sess = client.jingle.sessions[sid];
+        sess.decline();
+    };
+
+    client.endCall = function (sid, reason) {
+        var sess = client.jingle.sessions[sid];
+        sess.end(reason);
+    };
+
 };

@@ -1,12 +1,11 @@
 
 import Storage from './index'
-import { LegacyEntityCaps } from 'stanza/protocol';
 
 type DiscoId = string;
 
 export type Disco = {
     ver: DiscoId;
-    caps: LegacyEntityCaps[];
+    features: string[];
 }
 
 type Cb = ((err: string | Event | null, res?: Disco) => void) | null;
@@ -28,11 +27,11 @@ class DiscoStorage {
         const trans = this.storage.db.transaction('disco', mode);
         return trans.objectStore('disco');
     };
-    add(disco: LegacyEntityCaps[], cb?: Cb) {
+    add(disco: string[], cb?: Cb) {
         cb = cb || function () { };
         const data = {
             ver: '1',
-            caps: disco,
+            features: disco,
         };
         const request = this.transaction('readwrite').put(data);
         request.onsuccess = function () {

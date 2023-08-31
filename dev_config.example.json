@@ -1,31 +1,31 @@
 {
   "isDev": true,
   "http": {
-      "baseUrl": "http://localhost:8000",
-      "port": 8000,
-      "key": "./fakekeys/privatekey.pem",
-      "cert": "./fakekeys/certificate.pem"
+    "baseUrl": "http://localhost:8000",
+    "port": 8000,
+    "key": "./fakekeys/privatekey.pem",
+    "cert": "./fakekeys/certificate.pem"
   },
   "session": {
-      "secret": "shhhhhh don't tell anyone ok?"
+    "secret": "shhhhhh don't tell anyone ok?"
   },
   "server": {
-      "name": "Kaiwa",
-      "domain": "example.com",
-      "wss": "wss://localhost:5280/xmpp-websocket/",
-      "securePasswordStorage": true,
-      "muc": "chat.example.com",
-      "startup": "http://localhost:5280",
-      "admin": "admin",
-      "gravatar": false,
-      "keepalive": {
-          "interval": 45,
-          "timeout": 15
-      },
-      "cmd": [
-        "yarn", "run",
-        "gulp", "start",
-        "--gulpfile", "xmpp_server/Gulpfile.js"
-      ]
+    "name": "Kaiwa",
+    "domain": "example.com",
+    "wss": "wss://192.168.0.70:5280/ws/",
+    "securePasswordStorage": true,
+    "muc": "chat.example.com",
+    "startup": "http://192.168.0.70:5280/admin",
+    "admin": "admin",
+    "gravatar": false,
+    "keepalive": {
+      "interval": 45,
+      "timeout": 15
+    },
+    "cmd": [
+      "yarn", "run",
+      "gulp", "start",
+      "--gulpfile", "xmpp_server/Gulpfile.js"
+    ]
   }
 }

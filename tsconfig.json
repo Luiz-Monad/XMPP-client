@@ -16,14 +16,14 @@
     "removeComments": true,
     "baseUrl": "./src/js",
     "paths": {
-      "templates": [
-        "templates.js"
+      "parselinks": [
+        "libraries/parselinks.js"
       ],
       "resampler": [
         "libraries/resampler.js"
       ],
-      "parselinks": [
-        "libraries/parselinks.js"
+      "templates": [
+        "templates.js"
       ]
     }
   },

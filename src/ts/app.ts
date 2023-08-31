@@ -10,8 +10,8 @@ import SoundEffectManager from 'sound-effect-manager';
 
 import { Profile } from './storage/profile';
 import State, { StateType } from './models/state';
-import Me, { MeType } from './models/me';
-import BasePage, { BasePageType } from './pages/base';
+import Me from './models/me';
+import { BasePageType } from './pages/base';
 import MainView from './views/main';
 import Router from './router';
 import AppStorage from './storage';

@@ -6,6 +6,7 @@ module.exports = {
     devtool: 'cheap-source-map',
 
     resolve: {
+        extensions: ['.ts', '.tsx', '.js', '.json'],
         fallback: {
             path: require.resolve('path-browserify'),
             crypto: require.resolve('crypto-browserify'),
@@ -18,7 +19,12 @@ module.exports = {
             util: false,
             assert: false,
             child_process: false,
-        }
+        },
+        alias: {
+            'parselinks': path.resolve(__dirname, './src/js/libraries/parselinks.js'),
+            'resampler': path.resolve(__dirname, './src/js/libraries/resampler.js'),
+            'templates': path.resolve(__dirname, './src/js/templates.js')
+        },
     },
 
     context: path.join(__dirname, './src/ts'),

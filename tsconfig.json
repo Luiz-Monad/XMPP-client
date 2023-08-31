@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES6",
     "module": "CommonJS",
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "Node",
     "outDir": "./src/js",
     "strict": true,
     "strictNullChecks": true,
@@ -24,8 +24,12 @@
       ],
       "templates": [
         "templates.js"
-      ]
-    }
+      ],
+    },
+    "lib": [
+      "es6",
+      "dom",
+    ],
   },
   "include": [
     "./src/**/*.ts",

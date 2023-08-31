@@ -1,6 +1,7 @@
 const { spawn } = require('child_process');
+const kill = require('tree-kill');
 
-exports.executer = function executer (cmdargs, cb) {
+exports.executer = function executer(cmdargs, cb) {
     const cmd = cmdargs[0];
     const args = cmdargs.slice(1);
     const child = spawn(cmd, args, { stdio: 'inherit', shell: true });
@@ -16,5 +17,17 @@ exports.executer = function executer (cmdargs, cb) {
             cb();
         }
     });
+    child.treekill = () => {
+        child.stdin?.end();
+        child.stdout?.destroy();
+        child.stderr?.destroy(); 
+        kill(child.pid, 'SIGKILL', (err) => {
+            if (err) {
+                console.error('Failed to kill process tree:', err);
+            } else {
+                console.log('Successfully killed the webpack process tree');
+            }
+        });
+    };
     return child;
 }

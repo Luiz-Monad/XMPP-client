@@ -8,7 +8,7 @@
  *
  * Some regexps adapted from http://userscripts.org/scripts/review/7122
  */
-var parseLinks = (function() {
+module.exports = (function () {
     var k = "[a-z\\d.-]+://",
         h = "(?:(?:[0-9]|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])\\.){3}(?:[0-9]|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])",
         c = "(?:(?:[^\\s!@#$%^&*()_=+[\\]{}\\\\|;:'\",.<>/?]+)\\.)+",
@@ -32,12 +32,12 @@ var parseLinks = (function() {
             "b:": "b9"
         },
         i = {
-            callback: function(q, p) {
+            callback: function (q, p) {
                 return p ? '<a href="' + p + '" title="' + p + '">' + q + "</a>" : q
             },
             punct_regexp: /(?:[!?.,:;'"]|(?:&|&amp;)(?:lt|gt|quot|apos|raquo|laquo|rsaquo|lsaquo);)$/
         };
-    return function(u, z) {
+    return function (u, z) {
         z = z || {};
         var w, v, A, p, x = "",
             t = [],
@@ -67,7 +67,7 @@ var parseLinks = (function() {
                     }
                 }
                 if (z.punct_regexp) {
-                    A = A.replace(z.punct_regexp, function(F) {
+                    A = A.replace(z.punct_regexp, function (F) {
                         E -= F.length;
                         return ""
                     })

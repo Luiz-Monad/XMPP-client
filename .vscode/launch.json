@@ -2,7 +2,7 @@
   "version": "0.1.0",
   "configurations": [
     {
-      "name": "node src/server.js",
+      "name": "node server",
       "type": "node",
       "program": "src/server.js",
       "stopOnEntry": false,
@@ -15,7 +15,6 @@
       "env": {
         "NODE_ENV": "development"
       },
-      "sourceMaps": false,
       "request": "launch",
     },
     {
@@ -34,7 +33,24 @@
       "env": {
         "NODE_ENV": "development"
       },
-      "sourceMaps": false,
+      "request": "launch",
+    },
+    {
+      "name": "gulp watch webpack",
+      "type": "node",
+      "program": "./node_modules/gulp/bin/gulp.js",
+      "stopOnEntry": false,
+      "args": [
+        "webpackWatch"
+      ],
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "",
+      "runtimeArgs": [
+        "--nolazy"
+      ],
+      "env": {
+        "NODE_ENV": "development"
+      },
       "request": "launch",
     },
     {
@@ -53,16 +69,15 @@
       "env": {
         "NODE_ENV": "development"
       },
-      "sourceMaps": false,
       "request": "launch",
     },
     {
-      "name": "gulp client",
+      "name": "gulp webpack",
       "type": "node",
       "program": "./node_modules/gulp/bin/gulp.js",
       "stopOnEntry": false,
       "args": [
-        "client"
+        "webpack"
       ],
       "cwd": "${workspaceFolder}",
       "runtimeExecutable": "",
@@ -72,14 +87,14 @@
       "env": {
         "NODE_ENV": "development"
       },
-      "sourceMaps": false,
       "request": "launch",
     },
     {
-      "name": "Attach",
-      "type": "node",
-      "sourceMaps": false,
+      "name": "launch browser",
+      "type": "msedge",
       "request": "launch",
+      "webRoot": "${workspaceFolder}/src/ts",
+      "url": "http://localhost:8000/"      
     }
   ]
 }

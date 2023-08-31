@@ -1,5 +1,5 @@
 
-import _ from 'lodash';
+import _ from 'underscore';
 
 import Backbone from 'backbone';
 import asyncjs from 'async';

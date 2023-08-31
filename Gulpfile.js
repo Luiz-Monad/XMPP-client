@@ -7,7 +7,6 @@ const { mkdirp } = require('mkdirp');
 const stylus = require('gulp-stylus');
 const templatizer = require('templatizer');
 const gitrev = require('git-rev');
-const webpack = require("webpack-stream");
 const gutil = require("gulp-util");
 const once = require('once');
 const { executer } = require('./executer');
@@ -66,6 +65,8 @@ watchRecompileTask(() => (cb) => {
         './package.json',
         './dev_config.json',
         './webpack.config.js',
+        './tsconfig.json',
+        './babel.config.json',
     ], keepRunning(batch({}, (events, done) => {
         console.log('==> Recompiling Kaiwa');
         const cmd = ['yarn', 'run', 'gulp', 'compile'];
@@ -83,18 +84,6 @@ resourcesTask(() => (cb) => {
 });
 
 clientTask(() => parallel(jadeTemplatesTask(), jadeViewsTask(), webpackTask()));
-
-webpackTask(() => (cb) => {
-    webpack(Object.assign({
-        plugins: []
-    }, require('./webpack.config.js')), null, (err, stats) => {
-        if (err) return cb(JSON.stringify(err));
-        gutil.log("[webpack]", stats.toString());
-        return stats;
-    })
-        .pipe(dest('./public/js'))
-        .on('end', cb);
-});
 
 configTask(() => (cb) => {
     const config = getConfig();
@@ -195,6 +184,16 @@ serverTask(() => (cb) => {
     executer(config.server.cmd, cb)
 });
 
+webpackTask(() => (cb) => {
+    const cmd = [
+        'yarn', 'run',
+        'webpack-cli',
+        '--progress',
+        '--mode', 'production'
+    ];
+    webpack = executer(cmd, cb);
+})
+
 webpackWatchTask(() => (cb) => {
     let webpack;
     const keepRunning = (fn) => (done) => {
@@ -214,12 +213,14 @@ webpackWatchTask(() => (cb) => {
     };
     const stop = () => {
         if (webpack) {
-            webpack.kill();
+            webpack.treekill();
             webpack = null;
         }
     };
     watch([
         './webpack.config.js',
+        './tsconfig.json',
+        './babel.config.json',
     ], keepRunning(batch({}, (events, done) => {
         console.log('==> Rewatching Kaiwa');
         stop();

@@ -5,7 +5,6 @@ import HumanModel from 'human-model';
 import Resources from './resources';
 import Messages from './messages';
 import Message, { MessageType, idLookup } from './message';
-import logger from 'andlog';
 import fetchAvatar, { VCardSource, VCardType } from '../helpers/fetchAvatar';
 import unpromisify from '../helpers/unpromisify';
 import Call from './call';
@@ -249,7 +248,7 @@ const Contact = HumanModel.define({
             this.callState = 'starting';
             client.call(peer.id);
         } else {
-            logger.error('no jingle resources for this user');
+            console.error('no jingle resources for this user');
         }
     },
     setAvatar: function (id: string, type?: VCardType, source?: VCardSource) {

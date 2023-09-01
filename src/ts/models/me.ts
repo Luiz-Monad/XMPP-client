@@ -1,18 +1,18 @@
 
 import HumanModel from 'human-model';
 import getUserMedia from 'getusermedia';
+import { PresenceShow } from 'stanza/Constants';
+import { Presence } from 'stanza/protocol';
+import crypto from 'crypto';
+import resample from 'resampler';
 import Contacts from './contacts';
 import Calls from './calls';
 import Contact, { ContactType } from './contact';
 import MUCs from './mucs';
 import ContactRequests from './contactRequests';
 import fetchAvatar, { VCardSource, VCardType } from '../helpers/fetchAvatar';
-import crypto from 'crypto';
-import resample from 'resampler';
-import unpromisify from '../helpers/unpromisify';
+import { fire, rail } from '../helpers/railway';
 import { JID } from './jid';
-import { PresenceShow } from 'stanza/Constants';
-import { Presence } from 'stanza/protocol';
 
 const Me = HumanModel.define({
     initialize: function (opts?: { avatarID?: string }) {
@@ -114,7 +114,9 @@ const Me = HumanModel.define({
     },
     setAvatar: function (id?: string | null, type?: VCardType, source?: VCardSource) {
         const self = this;
-        fetchAvatar('', id, type, source, function (avatar) {
+        fire(async () => {
+            const [err, avatar] = await rail(fetchAvatar('', id, type, source));
+            if (err) console.warn(err);
             self.avatarID = avatar?.id;
             self.avatar = avatar?.uri;
         });
@@ -123,22 +125,23 @@ const Me = HumanModel.define({
         if (!data) data = this.avatar;
         if (!data || data.indexOf('https://') !== -1) return;
 
-        resample(data, 80, 80, function (data) {
+        const sdata = data;
+        const self = this;
+        fire(async () => {
+            const data = await new Promise<string>((ok, err) => resample(sdata, 80, 80, ok));
             const b64 = data.split(',');
             const b64Type = b64[0];
             const b64Data = Buffer.from(b64[1], 'base64');
             const id = crypto.createHash('sha1').update(b64Data).digest('hex');
-            app.storage.avatars.add({ id: id, type: b64Type, uri: data });
-            unpromisify(client.publishAvatar)(id, b64Data, function (err, res) {
-                if (err) return;
-                client.useAvatars([{
-                    id: id,
-                    width: 80,
-                    height: 80,
-                    mediaType: 'image/png',
-                    bytes: b64Data.length
-                }]);
-            });
+            await app.storage.avatars.add({ id: id, type: b64Type, uri: data });
+            await client.publishAvatar(id, b64Data);
+            await client.useAvatars([{
+                id: id,
+                width: 80,
+                height: 80,
+                mediaType: 'image/png',
+                bytes: b64Data.length
+            }]);
         });
     },
     setSoundNotification: function (enable: boolean) {
@@ -184,19 +187,23 @@ const Me = HumanModel.define({
     },
     removeContact: function (jid: string) {
         const self = this;
-        unpromisify(client.removeRosterItem)(jid, function (err, res) {
+        fire(async () => {
+            const [err] = await rail(client.removeRosterItem(jid));
+            if (err) console.warn(err);
             const contact = self.getContact(jid);
             if (!contact) return;
             self.contacts.remove(contact.jid);
-            app.storage.roster.remove(contact.storageId);
+            await app.storage.roster.remove(contact.storageId);
         });
     },
     load: function () {
         if (!this.jid.bare) return;
 
         const self = this;
+        fire(async () => {
 
-        app.storage.profiles.get(this.jid.bare, function (err, profile) {
+            const [err, profile] = await rail(app.storage.profiles.get(self.jid.bare));
+            if (err) console.warn(err);
             if (!err) {
                 self.nick = self.jid.local;
                 self.status = profile?.status;
@@ -204,23 +211,23 @@ const Me = HumanModel.define({
                 self.soundEnabled = profile?.soundEnabled;
             }
             self.save();
-            app.storage.roster.getAll(self.jid.bare, function (err, contacts) {
-                if (err || !contacts) return;
+            const contacts = await app.storage.roster.getAll(self.jid.bare);
 
-                contacts.forEach(function (ncontact) {
-                    const contact = new Contact(ncontact);
-                    contact.owner = self.jid.bare;
-                    contact.inRoster = true;
-                    if (contact.jid.indexOf('@' + SERVER_CONFIG.domain) > -1)
-                        contact.persistent = true;
-                    contact.save();
-                    self.contacts.add(contact);
-                });
+            contacts.forEach((ncontact) => {
+                const contact = new Contact(ncontact);
+                contact.owner = self.jid.bare;
+                contact.inRoster = true;
+                if (contact.jid.indexOf('@' + SERVER_CONFIG.domain) > -1)
+                    contact.persistent = true;
+                contact.save();
+                self.contacts.add(contact);
             });
-        });
 
-        this.mucs.once('loaded', function () {
-            self.contacts.trigger('loaded');
+        });
+        fire(async () => {
+            this.mucs.once('loaded', function () {
+                self.contacts.trigger('loaded');
+            });
         });
     },
     isMe: function (jid?: string | JID | null) {
@@ -272,14 +279,17 @@ const Me = HumanModel.define({
         app.state.hasActiveCall = !!this.calls.length;
     },
     save: function () {
-        const data = {
-            jid: this.jid.bare,
-            avatarID: this.avatarID,
-            status: this.status,
-            rosterVer: this.rosterVer,
-            soundEnabled: this.soundEnabled
-        };
-        app.storage.profiles.set(data);
+        const self = this;
+        fire(async () => {
+            const data = {
+                jid: this.jid.bare,
+                avatarID: this.avatarID,
+                status: this.status,
+                rosterVer: this.rosterVer,
+                soundEnabled: this.soundEnabled
+            };
+            await app.storage.profiles.set(data);
+        });
     },
     cameraOn: function () {
         const self = this;

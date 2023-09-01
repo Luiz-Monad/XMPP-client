@@ -1,7 +1,7 @@
 
+import { fire } from '../helpers/railway';
 import BaseCollection from './baseCollection';
 import MUC, { MUCType } from './muc';
-import unpromisify from '../helpers/unpromisify';
 import { MUCBookmark } from 'stanza/protocol';
 
 const MUCs = BaseCollection.extend({
@@ -23,28 +23,27 @@ const MUCs = BaseCollection.extend({
     },
     fetch: function () {
         const self = this;
-        app.whenConnected(function () {
-            unpromisify(client.getBookmarks)(function (err, res) {
-                if (err) return;
+        fire(async () => {
+            await app.whenConnected();
+            const res = await client.getBookmarks();
 
-                const mucs = res || [];
-                mucs.forEach(function (muc) {
-                    self.add(muc);
-                    if (muc.autoJoin) {
-                        self.get(muc.jid).join();
-                    }
-                });
-
-                self.trigger('loaded');
+            const mucs = res || [];
+            mucs.forEach((muc) => {
+                self.add(muc);
+                if (muc.autoJoin) {
+                    self.get(muc.jid).join();
+                }
             });
+
+            self.trigger('loaded');
         });
     },
-    save: function (cb?: () => void) {
-        cb = cb || function () { };
+    save: function () {
         const self = this;
-        app.whenConnected(function () {
+        fire(async () => {
+            await app.whenConnected();
             const models: MUCBookmark[] = [];
-            self.models.forEach(function (model) {
+            self.models.forEach((model) => {
                 models.push({
                     name: model.name,
                     jid: model.jid ?? '',
@@ -52,7 +51,7 @@ const MUCs = BaseCollection.extend({
                     autoJoin: model.autoJoin
                 });
             });
-            unpromisify(client.setBookmarks)(models, cb!);
+            await client.setBookmarks(models);
         });
     },
 });

@@ -6,6 +6,7 @@ import HumanModel from 'human-model';
 import templates from 'templates';
 import htmlify from '../helpers/htmlify';
 import { JID } from './jid';
+import { fire } from '../helpers/railway';
 
 export class Delay {
     from?: string;
@@ -186,7 +187,7 @@ const Message = HumanModel.define({
                 const oobURIs = _.pluck(this.oobURIs || [], 'url');
                 const uniqueURIs = _.unique(emptyURIs.concat(urls).concat(oobURIs));
 
-                uniqueURIs.forEach(function (url) {
+                uniqueURIs.forEach((url) => {
                     const oidx = oobURIs.indexOf(url);
                     if (oidx >= 0) {
                         result.push({
@@ -243,18 +244,21 @@ const Message = HumanModel.define({
             idStore(from, this.mid, this);
         }
 
-        const data = {
-            archivedId: this.archivedId || uuid.v4(),
-            owner: this.owner,
-            to: this.to,
-            from: this.from,
-            created: this.created,
-            body: this.body,
-            type: this.type,
-            delay: this.delay,
-            edited: this.edited
-        };
-        app.storage.archive.add(data);
+        const self = this;
+        fire(async () => {
+            const data = {
+                archivedId: self.archivedId || uuid.v4(),
+                owner: self.owner,
+                to: self.to,
+                from: self.from,
+                created: self.created,
+                body: self.body,
+                type: self.type,
+                delay: self.delay,
+                edited: self.edited
+            };
+            await app.storage.archive.add(data);
+        });
     },
     shouldGroupWith: function (previous?: { from?: JID; created?: Date }) {
         let fullOrBare: (jid: JID) => string

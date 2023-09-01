@@ -1,5 +1,5 @@
 import { Agent, Client, JXT } from "stanza";
-import unpromisify from "./unpromisify";
+import { rail } from "./railway";
 
 type Cb = () => void;
 
@@ -87,7 +87,7 @@ export default function (client: Agent, registry: JXT.Registry) {
     };
 
     client.getPushServices = function (cb) {
-        return unpromisify(client.getDiscoItems)('', 'urn:xmpp:push', cb);
+        return rail(client.getDiscoItems('', 'urn:xmpp:push')).then(cb);
     };
 
     client.unregisterPushService = function (jid, cb) {

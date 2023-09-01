@@ -2,8 +2,7 @@
 import _ from 'underscore';
 
 import Backbone from 'backbone';
-import asyncjs from 'async';
-import StanzaIO from 'stanza';
+import StanzaIO, { createClient } from 'stanza';
 import Notify from 'notify.js';
 import url from 'url';
 import SoundEffectManager from 'sound-effect-manager';
@@ -17,8 +16,9 @@ import Router from './router';
 import AppStorage from './storage';
 import xmppEventHandlers from './helpers/xmppEventHandlers';
 import pushNotifications from './helpers/pushNotifications';
-import unpromisify from './helpers/unpromisify';
 import HumanView from 'human-view';
+import { fire, rail } from './helpers/railway';
+import { promisify } from 'util';
 
 export class App {
     config: StanzaIO.AgentConfig = <StanzaIO.AgentConfig>{};
@@ -64,108 +64,92 @@ export class App {
         app.config = parseConfig(config);
         app.config.useStreamManagement = false; // Temporary solution because this feature is bugged on node 4.0
 
+        if (!app.config.jid) {
+            console.log('not logged in');
+            app.whenDisconnected();
+            return;
+        }
         _.extend(this, Backbone.Events);
 
-        let profile: Profile = {} as Profile;
-        asyncjs.series([
-            function (cb) {
-                app.notifications = new Notify();
-                app.soundManager = new SoundEffectManager();
-                app.storage = new AppStorage();
-                app.storage.open(cb);
-                app.composing = {};
-                app.timeInterval = 0;
-            },
-            function (cb) {
-                app.storage.profiles.get(app.config.jid, function (err, res) {
-                    if (res) {
-                        profile = res;
-                        profile.jid = app.config.jid ?? '';
-                        app.config.rosterVer = res.rosterVer;
-                    }
-                    cb();
-                })
-            },
-            function (cb) {
-                app.state = new State();
-                window['me'] = new Me(profile);
+        fire(async () => {
+            app.notifications = new Notify();
+            app.soundManager = new SoundEffectManager();
+            app.storage = new AppStorage();
+            await app.storage.open();
+            app.composing = {};
+            app.timeInterval = 0;
 
-                window.onbeforeunload = function () {
-                    if (client.sessionStarted) {
-                        client.disconnect();
-                    }
-                };
-
-                window['client'] = StanzaIO.createClient(app.config);
-                client.use(pushNotifications);
-                xmppEventHandlers(client, self);
-
-                client.once('session:started', function () {
-                    app.state.hasConnected = true;
-                    cb();
-                })
-                client.connect();
-            },
-            function (cb) {
-                app.soundManager.loadFile('sounds/ding.wav', 'ding');
-                app.soundManager.loadFile('sounds/threetone-alert.wav', 'threetone-alert');
-                cb();
-            },
-            function (cb) {
-                app.whenConnected(function () {
-                    function getInterval() {
-                        if (client.sessionStarted) {
-                            unpromisify(client.getTime)(self.id, function (err, res) {
-                                if (err) return;
-                                self.timeInterval = (res.utc?.getMilliseconds() ?? 0) - Date.now();
-                            })
-                            setTimeout(getInterval, 600000);
-                        }
-                    }
-                    getInterval();
-                });
-                cb();
-            },
-            function (cb) {
-                app.whenConnected(function () {
-                    me.publishAvatar();
-                });
-
-                function start() {
-                    // start our router and show the appropriate page
-                    const baseUrl = url.parse(SERVER_CONFIG.baseUrl ?? '')
-                    app.history.start({ pushState: false, root: baseUrl.pathname! })
-                    if ('fragment' in app.history && app.history.fragment === '' && SERVER_CONFIG.startup)
-                        app.navigate(SERVER_CONFIG.startup)
-                    cb()
-                };
-
-                new Router();
-                app.history = Backbone.history;
-                app.history.on('route', function (route, params) {
-                    app.state.pageChanged = params;
-                });
-
-                const view = new MainView({
-                    model: app.state,
-                    el: document.body,
-                });
-                view.render();
-
-                if (me.contacts.length) {
-                    start();
-                } else {
-                    me.contacts.once('loaded', start);
-                }
+            let profile: Profile = {
+                jid: app.config.jid!,
+            };
+            const res = await app.storage.profiles.get(app.config.jid);
+            if (res) {
+                profile = res;
+                profile.jid = app.config.jid!;
+                app.config.rosterVer = res.rosterVer;
             }
-        ])
+
+            app.state = new State();
+            window['me'] = new Me(profile);
+
+            window.onbeforeunload = function () {
+                if (client.sessionStarted) {
+                    client.disconnect();
+                }
+            };
+
+            window['client'] = createClient(app.config);
+            client.use(pushNotifications);
+            xmppEventHandlers(client, self);
+
+            await new Promise((ok, err) => me.contacts.once('session:started', ok));
+            app.state.hasConnected = true;
+            client.connect();
+
+            app.soundManager.loadFile('sounds/ding.wav', 'ding');
+            app.soundManager.loadFile('sounds/threetone-alert.wav', 'threetone-alert');
+
+            await app.whenConnected();
+
+            function getInterval() {
+                if (!client.sessionStarted) return;
+                fire(async () => {
+                    const [err, res] = await rail(client.getTime(self.id));
+                    if (err || !res) return;
+                    self.timeInterval = (res.utc?.getMilliseconds() ?? 0) - Date.now();
+                });
+                setTimeout(getInterval, 600000);
+            }
+            getInterval();
+
+            me.publishAvatar();
+
+            new Router();
+            app.history = Backbone.history;
+            app.history.on('route', function (route, params) {
+                app.state.pageChanged = params;
+            });
+
+            const view = new MainView({
+                model: app.state,
+                el: document.body,
+            });
+            view.render();
+
+            if (!me.contacts.length) {
+                await new Promise((ok, err) => me.contacts.once('loaded', ok));
+            }
+
+            // start our router and show the appropriate page
+            const baseUrl = url.parse(SERVER_CONFIG.baseUrl ?? '')
+            app.history.start({ pushState: false, root: baseUrl.pathname! })
+            if ('fragment' in app.history && app.history.fragment === '' && SERVER_CONFIG.startup)
+                app.navigate(SERVER_CONFIG.startup)
+        });;
     }
-    whenConnected(func: ((_?: unknown) => void)) {
-        if (client.sessionStarted) {
-            func();
-        } else {
-            client.once('session:started', func);
-        }
+    async whenConnected() {
+        if (client.sessionStarted) return;
+        await new Promise((ok, err) => me.contacts.once('session:started', ok));
     }
     whenDisconnected() {
         window.location.href = 'login.html';

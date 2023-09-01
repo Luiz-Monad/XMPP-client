@@ -8,8 +8,6 @@ export type Avatar = {
     uri: string;
 }
 
-type Cb = ((err: string | Event | null, res?: Avatar) => void) | null;
-
 class AvatarStorage {
     private storage: Storage;
     constructor(storage: Storage) {
@@ -27,36 +25,39 @@ class AvatarStorage {
         const trans = this.storage.db.transaction('avatars', mode);
         return trans.objectStore('avatars');
     };
-    add(avatar: Avatar, cb?: Cb) {
-        cb = cb || function () { };
-        const request = this.transaction('readwrite').put(avatar);
-        request.onsuccess = function () {
-            cb!(null, avatar);
-        };
-        request.onerror = cb;
+    add(avatar: Avatar) {
+        return new Promise<Avatar>((ok, err) => {
+            const request = this.transaction('readwrite').put(avatar);
+            request.onsuccess = () => {
+                ok(avatar);
+            };
+            request.onerror = err;
+        });
     };
-    get(id?: AvatarId, cb?: Cb) {
-        cb = cb || function () { };
-        if (!id) {
-            return cb!('not-found');
-        }
-        const request = this.transaction('readonly').get(id);
-        request.onsuccess = function (e) {
-            const res = request.result;
-            if (res === undefined) {
-                return cb!('not-found');
+    get(id?: AvatarId) {
+        return new Promise<Avatar>((ok, err) => {
+            if (!id) {
+                return err('not-found');
             }
-            cb!(null, request.result);
-        };
-        request.onerror = cb;
+            const request = this.transaction('readonly').get(id);
+            request.onsuccess = () => {
+                const res = request.result;
+                if (res === undefined) {
+                    return err('not-found');
+                }
+                ok(res);
+            };
+            request.onerror = err;
+        });
     };
-    remove(id: AvatarId, cb?: Cb) {
-        cb = cb || function () { };
-        const request = this.transaction('readwrite').delete(id);
-        request.onsuccess = function (e) {
-            cb!(null, request.result);
-        };
-        request.onerror = cb;
+    remove(id: AvatarId) {
+        return new Promise<AvatarId>((ok, err) => {
+            const request = this.transaction('readwrite').delete(id);
+            request.onsuccess = () => {
+                ok(id);
+            };
+            request.onerror = err;
+        });
     };
 };
 

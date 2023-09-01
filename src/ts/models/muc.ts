@@ -5,14 +5,14 @@ import HumanModel from 'human-model';
 import Resources from './resources';
 import Messages from './messages';
 import Message, { MessageType, idLookup } from './message';
-import unpromisify from '../helpers/unpromisify';
 import { JID } from './jid';
 import { DataForm } from 'stanza/protocol';
+import { rail, fire } from '../helpers/railway';
 
 const MUC = HumanModel.define({
-    initialize: function (attrs: { jid: JID }) {
+    initialize: function (attrs: { jid: string }) {
         if (attrs.jid) {
-            this.id = attrs.jid.full;
+            this.id = attrs.jid;
         }
         const self = this;
         this.resources.bind('add remove reset', function () {
@@ -161,68 +161,77 @@ const MUC = HumanModel.define({
         }
     },
     join: function (manual?: boolean) {
-        if (!this.jid) {
-            this.jid = me.jid.bare;
-        }
-        if (!this.nick) {
-            this.nick = me.jid.local ?? me.jid.full;
-        }
-        this.messages.reset();
-        this.resources.reset();
+        const self = this;
+        fire(async () => {
 
-        client.joinRoom(this.jid, this.nick, {
-            muc: {
-                type: 'join',
-                history: {
-                    maxStanzas: 50
-                },
+            if (!self.jid) {
+                self.jid = me.jid.bare;
             }
-        });
+            if (!self.nick) {
+                self.nick = me.jid.local ?? me.jid.full;
+            }
+            self.messages.reset();
+            self.resources.reset();
 
-        if (manual) {
-            const form: DataForm = {
-                fields: [
-                    {
-                        type: 'hidden',
-                        name: 'FORM_TYPE',
-                        value: 'http://jabber.org/protocol/muc#roomconfig'
+            await client.joinRoom(self.jid, self.nick, {
+                muc: {
+                    type: 'join',
+                    history: {
+                        maxStanzas: 50
                     },
-                    {
-                        type: 'boolean',
-                        name: 'muc#roomconfig_changesubject',
-                        value: true
-                    },
-                    {
-                        type: 'boolean',
-                        name: 'muc#roomconfig_persistentroom',
-                        value: true
-                    },
-                ]
-            };
-            unpromisify(client.configureRoom)(this.jid, form, function (err, resp) {
-                if (err) return;
+                }
             });
 
-            if (SERVER_CONFIG.domain && SERVER_CONFIG.admin) {
-                const jid = this.jid;
-                unpromisify(client.setRoomAffiliation)(jid, SERVER_CONFIG.admin + '@' + SERVER_CONFIG.domain, 'owner', 'administration', function (err, resp) {
-                    if (err) return;
-                    client.setRoomAffiliation(jid, me.jid.bare, 'none', 'administration');
-                });
-            }
-        }
+            if (manual) {
+                const form: DataForm = {
+                    fields: [
+                        {
+                            type: 'hidden',
+                            name: 'FORM_TYPE',
+                            value: 'http://jabber.org/protocol/muc#roomconfig'
+                        },
+                        {
+                            type: 'boolean',
+                            name: 'muc#roomconfig_changesubject',
+                            value: true
+                        },
+                        {
+                            type: 'boolean',
+                            name: 'muc#roomconfig_persistentroom',
+                            value: true
+                        },
+                    ]
+                };
+                const [err] = await rail(client.configureRoom(self.jid, form));
+                if (err) console.warn(err);
 
-        const self = this;
-        // After a reconnection
-        client.on('muc:join', function (pres) {
-            if (self.messages.length) {
-                self.fetchHistory(true);
+                if (SERVER_CONFIG.domain && SERVER_CONFIG.admin) {
+                    const jid = self.jid;
+                    const [err] = await rail(client.setRoomAffiliation(jid,
+                        SERVER_CONFIG.admin + '@' + SERVER_CONFIG.domain,
+                        'owner', 'administration'));
+                    if (!err) {
+                        const [err] = await rail(client.setRoomAffiliation(jid,
+                            me.jid.bare, 'none', 'administration'));
+                        if (err) console.warn(err);
+                    }
+                }
             }
+
+            // After a reconnection
+            client.on('muc:join', function (pres) {
+                if (self.messages.length) {
+                    self.fetchHistory(true);
+                }
+            });
+
         });
     },
     fetchHistory: function (allInterval?: boolean) {
         const self = this;
-        app.whenConnected(function () {
+        fire(async () => {
+            await app.whenConnected();
+
             const filter: {
                 to?: string,
                 rsm: {
@@ -251,51 +260,46 @@ const MUC = HumanModel.define({
                 }
             }
 
-            const search = (filter: Parameters<typeof client.searchHistory>[1]) => client.searchHistory(filter);
+            const res = await client.searchHistory(filter);
+            const results = res.results || [];
 
-            unpromisify(search)(filter, function (err, res) {
-                if (err) return;
+            results.forEach((result) => {
+                const msg = result.item.message ?? {};
 
-                const results = res.results || [];
+                const mid = msg.id ?? '';
+                delete msg.id;
 
-                results.forEach(function (result) {
-                    const msg = result.item.message ?? {};
-
-                    const mid = msg.id ?? '';
-                    delete msg.id;
-
-                    if (!msg.delay) {
-                        msg.delay = result.item.delay;
-                    }
-
-                    if (msg.replace && msg.from) {
-                        const original = idLookup(msg.from, msg.replace);
-                        // Drop the message if editing a previous, but
-                        // keep it if it didn't actually change an
-                        // existing message.
-                        if (original && original.correct(msg)) return;
-                    }
-
-                    const message = new Message(msg);
-                    message.mid = mid;
-                    message.archivedId = result.id;
-                    message.acked = true;
-
-                    self.addMessage(message, false);
-                });
-
-                if (allInterval) {
-                    self.trigger('refresh');
-                    if (results.length === 40)
-                        self.fetchHistory(true);
+                if (!msg.delay) {
+                    msg.delay = result.item.delay;
                 }
+
+                if (msg.replace && msg.from) {
+                    const original = idLookup(msg.from, msg.replace);
+                    // Drop the message if editing a previous, but
+                    // keep it if it didn't actually change an
+                    // existing message.
+                    if (original && original.correct(msg)) return;
+                }
+
+                const message = new Message(msg);
+                message.mid = mid;
+                message.archivedId = result.id;
+                message.acked = true;
+
+                self.addMessage(message, false);
             });
+
+            if (allInterval) {
+                self.trigger('refresh');
+                if (results.length === 40)
+                    self.fetchHistory(true);
+            }
         });
     },
     leave: function () {
         this.resources.reset();
         if (!this.jid) return;
-        client.leaveRoom(this.jid, this.nick);
+        fire(client.leaveRoom(this.jid, this.nick));
     },
 });
 

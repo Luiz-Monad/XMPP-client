@@ -8,8 +8,6 @@ export type Disco = {
     features: string[];
 }
 
-type Cb = ((err: string | Event | null, res?: Disco) => void) | null;
-
 class DiscoStorage {
     private storage: Storage;
     constructor(storage: Storage) {
@@ -27,30 +25,32 @@ class DiscoStorage {
         const trans = this.storage.db.transaction('disco', mode);
         return trans.objectStore('disco');
     };
-    add(disco: string[], cb?: Cb) {
-        cb = cb || function () { };
-        const data = {
-            ver: '1',
-            features: disco,
-        };
-        const request = this.transaction('readwrite').put(data);
-        request.onsuccess = function () {
-            cb!(null, data);
-        };
-        request.onerror = cb;
+    add(disco: string[]) {
+        return new Promise<Disco>((ok, err) => {
+            const data = {
+                ver: '1',
+                features: disco,
+            };
+            const request = this.transaction('readwrite').put(data);
+            request.onsuccess = function () {
+                ok(data);
+            };
+            request.onerror = err;
+        });
     };
-    get(cb?: Cb) {
-        cb = cb || function () { };
-        const ver = '1';
-        const request = this.transaction('readonly').get(ver);
-        request.onsuccess = function (e) {
-            const res = request.result;
-            if (res === undefined) {
-                return cb!('not-found');
-            }
-            cb!(null, request.result);
-        };
-        request.onerror = cb;
+    get() {
+        return new Promise<Disco>((ok, err) => {
+            const ver = '1';
+            const request = this.transaction('readonly').get(ver);
+            request.onsuccess = function (e) {
+                const res = request.result;
+                if (res === undefined) {
+                    return err('not-found');
+                }
+                ok(request.result);
+            };
+            request.onerror = err;
+        });
     };
 };
 

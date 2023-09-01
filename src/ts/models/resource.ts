@@ -1,7 +1,7 @@
 
 import HumanModel from 'human-model';
 import fetchAvatar, { VCardSource, VCardType } from '../helpers/fetchAvatar';
-import unpromisify from '../helpers/unpromisify';
+import { fire } from '../helpers/railway';
 
 class DiscoInfo {
     features: string[] = [];
@@ -102,32 +102,29 @@ const Resource = HumanModel.define({
         }
     },
     fetchTimezone: function () {
+        if (this.timezoneOffset) return;
+
         const self = this;
-
-        if (self.timezoneOffset) return;
-
-        app.whenConnected(function () {
-            unpromisify(client.getTime)(self.id, function (err, res) {
-                if (err) return;
-                self.timezoneOffset = res.tzo;
-            });
+        fire(async () => {
+            await app.whenConnected();
+            const res = await client.getTime(self.id);
+            self.timezoneOffset = res.tzo;
         });
     },
     fetchDisco: function () {
+        if (this.discoInfo) return;
+
         const self = this;
-
-        if (self.discoInfo) return;
-
-        app.whenConnected(function () {
-            unpromisify(client.getDiscoInfo)(self.id, '', function (err, res) {
-                if (err) return;
-                self.discoInfo = res;
-            });
+        fire(async () => {
+            await app.whenConnected();
+            const res = await client.getDiscoInfo(self.id);
+            self.discoInfo = res;
         });
     },
     setAvatar: function (id?: string, type?: VCardType, source?: VCardSource) {
         const self = this;
-        fetchAvatar(this.id, id, type, source, function (avatar) {
+        fire(async () => {
+            const avatar = await fetchAvatar(self.id, id, type, source);
             if (source === 'vcard' && self.avatarSource === 'pubsub') return;
             self.avatarID = avatar?.id;
             self.avatar = avatar?.uri;

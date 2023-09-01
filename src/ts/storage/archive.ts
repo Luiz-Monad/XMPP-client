@@ -17,9 +17,6 @@ type Archive = {
     acked?: boolean;
 }
 
-type Cb = ((err: string | Event | null, res?: Archive) => void) | null;
-type CbArr = ((err: string | Event | null, res?: Archive[]) => void) | null;
-
 class ArchiveStorage {
     private storage: Storage;
     constructor(storage: Storage) {
@@ -38,47 +35,50 @@ class ArchiveStorage {
         const trans = this.storage.db.transaction('archive', mode);
         return trans.objectStore('archive');
     };
-    add(archive: Archive, cb?: Cb) {
-        cb = cb || function () { };
-        const request = this.transaction('readwrite').put(archive);
-        request.onsuccess = function () {
-            cb!(null, archive);
-        };
-        request.onerror = cb;
+    add(archive: Archive) {
+        return new Promise<Archive>((ok, err) => {
+            const request = this.transaction('readwrite').put(archive);
+            request.onsuccess = function () {
+                ok(archive);
+            };
+            request.onerror = err;
+        });
     };
-    get(id?: ArchiveId, cb?: Cb) {
-        cb = cb || function () { };
-        if (!id) {
-            return cb!('not-found');
-        }
-        const request = this.transaction('readonly').get(id);
-        request.onsuccess = function (e) {
-            const res = request.result;
-            if (res === undefined) {
-                return cb!('not-found');
+    get(id?: ArchiveId) {
+        return new Promise<Archive>((ok, err) => {
+            if (!id) {
+                return err('not-found');
             }
-            request.result.acked = true;
-            cb!(null, request.result);
-        };
-        request.onerror = cb;
+            const request = this.transaction('readonly').get(id);
+            request.onsuccess = function (e) {
+                const res = request.result;
+                if (res === undefined) {
+                    return err('not-found');
+                }
+                request.result.acked = true;
+                ok(request.result);
+            };
+            request.onerror = err;
+        });
     };
-    getAll(owner: unknown, cb?: CbArr) {
-        cb = cb || function () { };
-        const results: Archive[] = [];
+    getAll(owner: unknown) {
+        return new Promise<Archive[]>((ok, err) => {
+            const results: Archive[] = [];
 
-        const store = this.transaction('readonly');
-        const request = store.index('owner').openCursor(IDBKeyRange.only(owner));
-        request.onsuccess = function (e) {
-            const cursor = request.result;
-            if (cursor) {
-                cursor.value.acked = true;
-                results.push(cursor.value as Archive);
-                cursor.continue();
-            } else {
-                cb!(null, results);
-            }
-        };
-        request.onerror = cb;
+            const store = this.transaction('readonly');
+            const request = store.index('owner').openCursor(IDBKeyRange.only(owner));
+            request.onsuccess = function (e) {
+                const cursor = request.result;
+                if (cursor) {
+                    cursor.value.acked = true;
+                    results.push(cursor.value as Archive);
+                    cursor.continue();
+                } else {
+                    ok(results);
+                }
+            };
+            request.onerror = err;
+        });
     };
 
 };

@@ -11,8 +11,6 @@ export type Profile = {
     soundEnabled?: boolean;
 }
 
-type Cb = ((err: string | Event | null, res?: Profile) => void) | null;
-
 class ProfileStorage {
     private storage: Storage;
     constructor(storage: Storage) {
@@ -30,36 +28,39 @@ class ProfileStorage {
         const trans = this.storage.db.transaction('profiles', mode);
         return trans.objectStore('profiles');
     };
-    set(profile: Profile, cb?: Cb) {
-        cb = cb || function () { };
-        const request = this.transaction('readwrite').put(profile);
-        request.onsuccess = function () {
-            cb!(null, profile);
-        };
-        request.onerror = cb;
+    set(profile: Profile) {
+        return new Promise<Profile>((ok, err) => {
+            const request = this.transaction('readwrite').put(profile);
+            request.onsuccess = () => {
+                ok(profile);
+            };
+            request.onerror = err;
+        });
     };
-    get(id?: ProfileId, cb?: Cb) {
-        cb = cb || function () { };
-        if (!id) {
-            return cb!('not-found');
-        }
-        const request = this.transaction('readonly').get(id);
-        request.onsuccess = function (e) {
-            const res = request.result;
-            if (res === undefined) {
-                return cb!('not-found');
+    get(id?: ProfileId) {
+        return new Promise<Profile>((ok, err) => {
+            if (!id) {
+                return err('not-found');
             }
-            cb!(null, request.result);
-        };
-        request.onerror = cb;
+            const request = this.transaction('readonly').get(id);
+            request.onsuccess = () => {
+                const res = request.result;
+                if (res === undefined) {
+                    return err('not-found');
+                }
+                ok(res);
+            };
+            request.onerror = err;
+        });
     };
-    remove(id: ProfileId, cb?: Cb) {
-        cb = cb || function () { };
-        const request = this.transaction('readwrite').delete(id);
-        request.onsuccess = function (e) {
-            cb!(null, request.result);
-        };
-        request.onerror = cb;
+    remove(id: ProfileId) {
+        return new Promise<ProfileId>((ok, err) => {
+            const request = this.transaction('readwrite').delete(id);
+            request.onsuccess = () => {
+                ok(id);
+            };
+            request.onerror = err;
+        });
     };
 };
 

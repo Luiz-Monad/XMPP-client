@@ -13,27 +13,27 @@ class Storage {
     readonly archive = new ArchiveStorage(this);
     readonly profiles = new ProfileStorage(this);
     private version = 3;
-    open(cb: ((err: Error | null, db?: IDBDatabase) => void) | null) {
-        cb = cb || function () { };
-
-        const self = this;
-        const request = indexedDB.open('datastorage', this.version);
-        request.onsuccess = function (e) {
-            self._db = this.result;
-            cb!(null, self._db);
-        };
-        request.onupgradeneeded = function (e) {
-            const db = this.result;
-            self.avatars.setup(db);
-            self.roster.setup(db);
-            self.disco.setup(db);
-            self.archive.setup(db);
-            self.profiles.setup(db);
-        };
-        request.onerror = function (e) {
-            cb!(this.error);
-        }
-    };
+    open() {
+        return new Promise<IDBDatabase>((ok, err) => {
+            const self = this;
+            const request = indexedDB.open('datastorage', this.version);
+            request.onsuccess = () => {
+                self._db = request.result;
+                ok(self._db);
+            };
+            request.onupgradeneeded = () => {
+                const db = request.result;
+                self.avatars.setup(db);
+                self.roster.setup(db);
+                self.disco.setup(db);
+                self.archive.setup(db);
+                self.profiles.setup(db);
+            };
+            request.onerror = () => {
+                err(request.error);
+            }
+        });
+    }
     get db(): IDBDatabase {
         if (!this._db) throw new Error('invalid state: not open')
         return this._db;

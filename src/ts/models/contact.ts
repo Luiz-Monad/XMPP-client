@@ -2,12 +2,12 @@
 import _ from 'underscore';
 import crypto from 'crypto';
 import HumanModel from 'human-model';
+import Call from './call';
 import Resources from './resources';
 import Messages from './messages';
 import Message, { MessageType, idLookup } from './message';
 import fetchAvatar, { VCardSource, VCardType } from '../helpers/fetchAvatar';
-import unpromisify from '../helpers/unpromisify';
-import Call from './call';
+import { fire } from '../helpers/railway';
 
 const Contact = HumanModel.define({
     initialize: function (attrs: { jid?: string; avatarID: string }) {
@@ -163,7 +163,7 @@ const Contact = HumanModel.define({
             deps: ['topResource', 'lockedResource', '_forceUpdate'],
             fn: function () {
                 const states: Record<string, boolean> = {};
-                this.resources.models.forEach(function (resource) {
+                this.resources.models.forEach((resource) => {
                     states[resource.chatState!] = true;
                 });
 
@@ -253,7 +253,8 @@ const Contact = HumanModel.define({
     },
     setAvatar: function (id: string, type?: VCardType, source?: VCardSource) {
         const self = this;
-        fetchAvatar(this.jid, id, type, source, function (avatar) {
+        fire(async () => {
+            const avatar = await fetchAvatar(self.jid, id, type, source);
             if (source === 'vcard' && self.avatarSource === 'pubsub') return;
             self.avatarID = avatar?.id;
             self.avatar = avatar?.uri;
@@ -312,7 +313,9 @@ const Contact = HumanModel.define({
     },
     fetchHistory: function (onlyLastMessages?: boolean, allInterval?: boolean) {
         const self = this;
-        app.whenConnected(function () {
+        fire(async () => {
+            await app.whenConnected();
+
             const filter: {
                 with: string,
                 rsm: {
@@ -354,65 +357,64 @@ const Contact = HumanModel.define({
                 }
             }
 
-            const search = (filter: Parameters<typeof client.searchHistory>[1]) => client.searchHistory(filter);
+            const res = await client.searchHistory(filter);
+            const results = res.results || [];
 
-            unpromisify(search)(filter, function (err, res) {
-                if (err) return;
+            self.lastHistoryFetch = new Date(Date.now() + app.timeInterval);
 
-                self.lastHistoryFetch = new Date(Date.now() + app.timeInterval);
+            if (!!onlyLastMessages && !allInterval) results.reverse();
+            results.forEach((result) => {
+                const msg = result.item.message ?? {};
 
-                const results = res.results || [];
-                if (!!onlyLastMessages && !allInterval) results.reverse();
-                results.forEach(function (result) {
-                    const msg = result.item.message ?? {};
+                const mid = msg.id ?? '';
+                delete msg.id;
 
-                    const mid = msg.id ?? '';
-                    delete msg.id;
-
-                    if (!msg.delay) {
-                        msg.delay = result.item.delay;
-                    }
-
-                    if (msg.replace && msg.from) {
-                        const original = idLookup(msg.from, msg.replace);
-                        // Drop the message if editing a previous, but
-                        // keep it if it didn't actually change an
-                        // existing message.
-                        if (original && original.correct(msg)) return;
-                    }
-
-                    const message = new Message(msg);
-                    message.mid = mid;
-                    message.archivedId = result.id;
-                    message.acked = true;
-
-                    self.addMessage(message, false);
-                });
-
-                if (allInterval) {
-                    if (results.length === 40) {
-                        self.fetchHistory(true, true);
-                    } else {
-                        self.trigger('refresh');
-                    }
+                if (!msg.delay) {
+                    msg.delay = result.item.delay;
                 }
+
+                if (msg.replace && msg.from) {
+                    const original = idLookup(msg.from, msg.replace);
+                    // Drop the message if editing a previous, but
+                    // keep it if it didn't actually change an
+                    // existing message.
+                    if (original && original.correct(msg)) return;
+                }
+
+                const message = new Message(msg);
+                message.mid = mid;
+                message.archivedId = result.id;
+                message.acked = true;
+
+                self.addMessage(message, false);
             });
+
+            if (allInterval) {
+                if (results.length === 40) {
+                    self.fetchHistory(true, true);
+                } else {
+                    self.trigger('refresh');
+                }
+            }
         });
     },
     save: function () {
         if (!this.inRoster) return;
 
-        const storageId = crypto.createHash('sha1').update(this.owner + '/' + this.id).digest('hex');
-        const data = {
-            storageId: storageId,
-            owner: this.owner,
-            jid: this.jid,
-            name: this.name,
-            groups: this.groups,
-            subscription: this.subscription,
-            avatarID: this.avatarID
-        };
-        app.storage.roster.add(data);
+        const self = this;
+        fire(async () => {
+            const storageId = crypto.createHash('sha1').update(self.owner + '/' + self.id).digest('hex');
+            const data = {
+                storageId: storageId,
+                owner: self.owner,
+                jid: self.jid,
+                name: self.name,
+                groups: self.groups,
+                subscription: self.subscription,
+                avatarID: self.avatarID
+            };
+            await app.storage.roster.add(data);
+        });
     },
     summarizeResources: function () {
     },

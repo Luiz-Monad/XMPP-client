@@ -9,11 +9,8 @@ export type Roster = {
     subscription?: string;
     groups?: string[];
     owner?: string;
-    avatarID?: string;
+    RosterID?: string;
 }
-
-type Cb = ((err: string | Event | null, res?: Roster) => void) | null;
-type CbArr = ((err: string | Event | null, res?: Roster[]) => void) | null;
 
 class RosterStorage {
     private storage: Storage;
@@ -33,61 +30,66 @@ class RosterStorage {
         const trans = this.storage.db.transaction('roster', mode);
         return trans.objectStore('roster');
     };
-    add(contact?: Roster, cb?: Cb) {
-        cb = cb || function () { };
-        const request = this.transaction('readwrite').put(contact);
-        request.onsuccess = function () {
-            cb!(null, contact);
-        };
-        request.onerror = cb;
+    add(contact: Roster) {
+        return new Promise<Roster>((ok, err) => {
+            const request = this.transaction('readwrite').put(contact);
+            request.onsuccess = () => {
+                ok(contact);
+            };
+            request.onerror = err;
+        })
     };
-    get(id?: RosterId, cb?: Cb) {
-        cb = cb || function () { };
-        if (!id) {
-            return cb!('not-found');
-        }
-        const request = this.transaction('readonly').get(id);
-        request.onsuccess = function (e) {
-            const res = request.result;
-            if (res === undefined) {
-                return cb!('not-found');
+    get(id?: RosterId) {
+        return new Promise<Roster>((ok, err) => {
+            if (!id) {
+                return err('not-found');
             }
-            cb!(null, request.result);
-        };
-        request.onerror = cb;
+            const request = this.transaction('readonly').get(id);
+            request.onsuccess = () => {
+                const res = request.result;
+                if (res === undefined) {
+                    return err('not-found');
+                }
+                ok(request.result);
+            };
+            request.onerror = err;
+        });
     };
-    getAll(owner: unknown, cb?: CbArr) {
-        cb = cb || function () { };
-        const results: Roster[] = [];
+    getAll(owner: unknown) {
+        return new Promise<Roster[]>((ok, err) => {
+            const results: Roster[] = [];
 
-        const store = this.transaction('readonly');
-        const request = store.index('owner').openCursor(IDBKeyRange.only(owner));
-        request.onsuccess = function (e) {
-            const cursor = request.result;
-            if (cursor) {
-                results.push(cursor.value as Roster);
-                cursor.continue();
-            } else {
-                cb!(null, results);
-            }
-        };
-        request.onerror = cb;
+            const store = this.transaction('readonly');
+            const request = store.index('owner').openCursor(IDBKeyRange.only(owner));
+            request.onsuccess = () => {
+                const cursor = request.result;
+                if (cursor) {
+                    results.push(cursor.value as Roster);
+                    cursor.continue();
+                } else {
+                    ok(results);
+                }
+            };
+            request.onerror = err;
+        });
     };
-    remove(id: RosterId, cb?: Cb) {
-        cb = cb || function () { };
-        const request = this.transaction('readwrite').delete(id);
-        request.onsuccess = function (e) {
-            cb!(null, request.result);
-        };
-        request.onerror = cb;
+    remove(id: RosterId) {
+        return new Promise<RosterId>((ok, err) => {
+            const request = this.transaction('readwrite').delete(id);
+            request.onsuccess = () => {
+                ok(id);
+            };
+            request.onerror = err;
+        });
     };
-    clear(cb?: Cb) {
-        cb = cb || function () { };
-        const request = this.transaction('readwrite').clear();
-        request.onsuccess = function () {
-            cb!(null, request.result);
-        };
-        request.onerror = cb;
+    clear() {
+        return new Promise<void>((ok, err) => {
+            const request = this.transaction('readwrite').clear();
+            request.onsuccess = () => {
+                ok()
+            };
+            request.onerror = err;
+        });
     };
 };
 

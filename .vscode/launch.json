@@ -93,8 +93,11 @@
       "name": "launch browser",
       "type": "msedge",
       "request": "launch",
-      "webRoot": "${workspaceFolder}/public",
-      "url": "http://localhost:8000/"      
+      "webRoot": "${workspaceFolder}/src/ts",
+      "url": "http://localhost:8000/",
+      "sourceMapPathOverrides": {
+        "webpack:///./*": "${webRoot}/*"
+      }
     }
   ]
 }

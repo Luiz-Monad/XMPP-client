@@ -1,8 +1,7 @@
 
 import crypto from 'crypto';
-import unpromisify from './unpromisify';
 import { Avatar } from '../storage/avatars';
-
+import { rail } from './railway';
 
 export type VCardType = string;
 export type VCardSource = 'vcard' | 'pubsub';
@@ -21,66 +20,62 @@ function fallback(jid: string): Partial<Avatar> {
     };
 };
 
-export default function (
+export default async (
     jid: string, id: string | undefined | null,
-    type: VCardType | undefined, source: VCardSource | undefined,
-    cb: (res?: Partial<Avatar>) => void) {
+    type: VCardType | undefined, source: VCardSource | undefined) => {
     if (!id) {
-        return cb(fallback(jid));
+        return fallback(jid);
     }
 
-    app.storage.avatars.get(id, function (err, avatar) {
-        if (!err) {
-            return cb(avatar);
+    const avatar = await app.storage.avatars.get(id);
+    if (!avatar) {
+        return avatar;
+    }
+
+    if (!type) {
+        return fallback(jid);
+    }
+
+    await app.whenConnected();
+
+    if (source === 'vcard') {
+        const [err, resp] = await rail(client.getVCard(jid));
+        if (err || !resp) {
+            return fallback(jid);
         }
 
-        if (!type) {
-            return cb(fallback(jid));
+        const rec = resp.records ? resp.records[0] : null;
+        if (!rec || rec.type !== 'photo') return fallback(jid);
+
+        type = rec.mediaType || type!;
+
+        const data = rec.data;
+        const uri = 'data:' + type + ';base64,' + data;
+
+        const avatar = {
+            id: id,
+            type: type,
+            uri: uri
+        };
+
+        await app.storage.avatars.add(avatar);
+        return avatar;
+    } else {
+        const [err, resp] = await rail(client.getAvatar(jid, id));
+        if (err || !resp) {
+            return fallback(jid);
         }
 
-        app.whenConnected(function () {
-            if (source === 'vcard') {
-                unpromisify(client.getVCard)(jid, function (err, resp) {
-                    if (err) {
-                        return cb(fallback(jid));
-                    }
+        const data = resp.content?.data;
+        const uri = 'data:' + type + ';base64,' + data;
 
-                    const rec = resp.records ? resp.records[0] : null;
-                    if (!rec || rec.type !== 'photo') return cb(fallback(jid));
+        const avatar = {
+            id: id,
+            type: type!,
+            uri: uri
+        };
 
-                    type = rec.mediaType || type!;
-
-                    const data = rec.data;
-                    const uri = 'data:' + type + ';base64,' + data;
-
-                    avatar = {
-                        id: id,
-                        type: type,
-                        uri: uri
-                    };
-
-                    app.storage.avatars.add(avatar);
-                    return cb(avatar);
-                });
-            } else {
-                unpromisify(client.getAvatar)(jid, id, function (err, resp) {
-                    if (err) {
-                        return;
-                    }
-
-                    const data = resp.content?.data;
-                    const uri = 'data:' + type + ';base64,' + data;
-
-                    avatar = {
-                        id: id,
-                        type: type!,
-                        uri: uri
-                    };
-
-                    app.storage.avatars.add(avatar);
-                    return cb(avatar);
-                });
-            }
-        });
-    });
-};
+        await app.storage.avatars.add(avatar);
+        return avatar;
+    }
+}

@@ -6,7 +6,7 @@ module.exports = (env, argv) => {
     const mode = argv.mode;
     const isDev = mode === 'development';
     return {
-        devtool: !isDev ? 'source-map' : 'cheap-source-map',
+        devtool: !isDev ? 'source-map' : 'eval-source-map', //'cheap-source-map',
 
         resolve: {
             extensions: ['.ts', '.tsx', '.js', '.json'],

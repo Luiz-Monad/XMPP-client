@@ -15,27 +15,23 @@ document.getElementById('login-form')!.addEventListener('submit', function (e) {
         return el && 'checked' in el ? el.checked as string : '';
     }
 
-    let jid = value('jid');
-    if (SERVER_CONFIG.domain && jid.indexOf('@') == -1)
-        jid += "@" + SERVER_CONFIG.domain;
+    const domain = SERVER_CONFIG.domain ?? '';
+    const jid = value('jid');
+    const parts = jid.split('@');
+    const user = parts[0];
+    const server = parts.indexOf('@') == -1 ? domain : parts[1];
     const password = value('password');
     const connURL = SERVER_CONFIG.wss ? SERVER_CONFIG.wss : value('connURL');
     const publicComputer = checked('public-computer');
 
-    let transport: { [key: string]: TransportConfig };
+    let transport: StanzaIO.AgentConfig['transports'];
     if (connURL.indexOf('http') === 0) {
         transport = {
-            bosh: {
-                jid: jid,
-                server: connURL,
-            }
+            bosh: connURL
         };
     } else if (connURL.indexOf('ws') === 0) {
         transport = {
-            websocket: {
-                jid: jid,
-                server: connURL,
-            }
+            websocket: connURL
         };
     } else {
         transport = {};
@@ -47,10 +43,12 @@ document.getElementById('login-form')!.addEventListener('submit', function (e) {
     }
 
     const config: StanzaIO.AgentConfig = {
-        server: jid.slice(jid.indexOf('@') + 1),
+        jid: jid,
+        server: server,
         transports: transport,
         credentials: {
-            password: password
+            username: user,
+            password: password,
         },
         //TODO:: saveCredentials: !publicComputer, 
         softwareVersion: softwareVersion

@@ -23,8 +23,6 @@
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.0",
     "getusermedia": "^2.0.1",
-    "human-model": "^2.6.2",
-    "human-view": "^1.8.0",
     "indexeddbshim": "^13.0.0-pre.1",
     "jquery": "^3.7.1",
     "localmedia": "^5.2.0",

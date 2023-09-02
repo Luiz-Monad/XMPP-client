@@ -12,16 +12,16 @@ import { fire, rail } from './railway';
 
 function createLogger(name: string) {
     return {
-        info: function (str: string) {
+        info: (str: string) => {
             console.info(`${name}: ${str}`);
         },
-        warn: function (str: string) {
+        warn: (str: string) => {
             console.warn(`${name}: ${str}`);
         },
-        error: function (str: string) {
+        error: (str: string) => {
             console.error(`${name}: ${str}`);
         },
-        debug: function (str: string) {
+        debug: (str: string) => {
             console.debug(`${name}: ${str}`);
         }
     };
@@ -125,13 +125,13 @@ export default function (client: StanzaIO.Agent, app: App) {
         app.state.connected = true;
     });
 
-    client.on('session:started', async (jid) => {
+    client.on('session:started', (jid) => {
         if (!jid) return;
         me.updateJid(JID.parse(jid));
 
         app.state.connected = true;
 
-        await Promise.all([
+        fire(Promise.all([
             async () => {
                 const resp = await client.getRoster();
                 if (resp && resp.items && resp.items.length) {
@@ -177,7 +177,7 @@ export default function (client: StanzaIO.Agent, app: App) {
                 }
             },
 
-        ]);
+        ]));
     });
 
     client.on('roster:update', (iq) => {

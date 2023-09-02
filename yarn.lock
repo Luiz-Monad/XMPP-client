@@ -1875,14 +1875,7 @@ bach@^1.0.0:
     async-settle "^1.0.0"
     now-and-later "^2.0.0"
 
-backbone@1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/backbone/-/backbone-1.0.0.tgz#5e146e1efa8a5361462e578377c39ed0f16b0b4c"
-  integrity sha512-8rhC3q3npBssGGBArAY5RF4lvIpciCvDY0lHmFrLqOi0/fj5rm25H0DJrJFXPwRnuIzIhQ6eS0j7URAxV3u9hA==
-  dependencies:
-    underscore ">=1.4.3"
-
-backbone@1.x.x, backbone@^1.5.0:
+backbone@^1.5.0:
   version "1.5.0"
   resolved "https://registry.yarnpkg.com/backbone/-/backbone-1.5.0.tgz#3f20e4c6feb22f896131bcc58eb599b9555e8744"
   integrity sha512-RPKlstw5NW+rD2X4PnEnvgLhslRnXOugXw2iBloHkPMgOxvakP1/A+tZIGM3qCm8uvZeEf8zMm0uvcK1JwL+IA==
@@ -4041,22 +4034,6 @@ https-proxy-agent@^5.0.0:
   dependencies:
     agent-base "6"
     debug "4"
-
-human-model@^2.6.2:
-  version "2.6.2"
-  resolved "https://registry.yarnpkg.com/human-model/-/human-model-2.6.2.tgz#4831e2bf4dccc88d32349dd4203811006e199aac"
-  integrity sha512-IOXt+kq7sdAPmbrSWYGUle04MoLvD7fIfA1SUb5rY8+LS1vZaLGsBzH9Mz3a7Eud+sR1uPa3dtg6ZiPWCU6Z4g==
-  dependencies:
-    backbone "1.0.0"
-    underscore "1.5.1"
-
-human-view@^1.8.0:
-  version "1.8.0"
-  resolved "https://registry.yarnpkg.com/human-view/-/human-view-1.8.0.tgz#8a4487d7c3682c28e137633f3fadafa2e687dd0e"
-  integrity sha512-H9F14NWuAtKfHeNI+QJsr0TwYvB74cFHOdYFhJRB+bcBRw7lOhY+uiJfnBmAUF+bynKf/o8uwG4KhOfG7CNraA==
-  dependencies:
-    backbone "1.x.x"
-    underscore "1.x.x"
 
 humanize-ms@^1.2.1:
   version "1.2.1"
@@ -7404,17 +7381,12 @@ unc-path-regex@^0.1.2:
   resolved "https://registry.yarnpkg.com/unc-path-regex/-/unc-path-regex-0.1.2.tgz#e73dd3d7b0d7c5ed86fbac6b0ae7d8c6a69d50fa"
   integrity sha512-eXL4nmJT7oCpkZsHZUOJo8hcX3GbsiDOa0Qu9F646fi8dT3XuSVopVqAcEiVzSKKH7UoDti23wNX3qGFxcW5Qg==
 
-underscore@1.5.1:
-  version "1.5.1"
-  resolved "https://registry.yarnpkg.com/underscore/-/underscore-1.5.1.tgz#d2bde817d176ffade894ab71458e682a14b86dc9"
-  integrity sha512-yOc7VukmA45a1D6clUn1mD7Mbc9LcVYAQEXNKSTblzha59hSFJ6cAt90JDoxh05GQnTPI9nk4wjT/I8C/nAMPw==
-
 underscore@1.5.2:
   version "1.5.2"
   resolved "https://registry.yarnpkg.com/underscore/-/underscore-1.5.2.tgz#1335c5e4f5e6d33bbb4b006ba8c86a00f556de08"
   integrity sha512-yejOFsRnTJs0N9CK5Apzf6maDO2djxGoLLrlZlvGs2o9ZQuhIhDL18rtFyy4FBIbOkzA6+4hDgXbgz5EvDQCXQ==
 
-underscore@1.x.x, underscore@>=1.4.3, underscore@>=1.8.3, underscore@^1.13.6:
+underscore@>=1.8.3, underscore@^1.13.6:
   version "1.13.6"
   resolved "https://registry.yarnpkg.com/underscore/-/underscore-1.13.6.tgz#04786a1f589dc6c09f761fc5f45b89e935136441"
   integrity sha512-+A5Sja4HP1M08MaXya7p5LvjuM7K6q/2EaC0+iovj/wOcMsTzMvDFbasi/oSapiwOlt252IqsKqPjCl7huKS0A==

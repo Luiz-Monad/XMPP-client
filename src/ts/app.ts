@@ -81,8 +81,8 @@ export class App {
             let profile: Profile = {
                 jid: app.config.jid!,
             };
-            const res = await app.storage.profiles.get(app.config.jid);
-            if (res) {
+            const [err, res] = await rail(app.storage.profiles.get(app.config.jid));
+            if (!err && res) {
                 profile = res;
                 profile.jid = app.config.jid!;
                 app.config.rosterVer = res.rosterVer;
@@ -91,7 +91,7 @@ export class App {
             app.state = new State();
             window['me'] = new Me(profile);
 
-            window.onbeforeunload = function () {
+            window.onbeforeunload = () => {
                 if (client.sessionStarted) {
                     client.disconnect();
                 }
@@ -100,10 +100,10 @@ export class App {
             window['client'] = createClient(app.config);
             client.use(pushNotifications);
             xmppEventHandlers(client, self);
-
-            await new Promise((ok, err) => me.contacts.once('session:started', ok));
-            app.state.hasConnected = true;
             client.connect();
+
+            await new Promise((ok, err) => client.once('session:started', ok));
+            app.state.hasConnected = true;
 
             app.soundManager.loadFile('sounds/ding.wav', 'ding');
             app.soundManager.loadFile('sounds/threetone-alert.wav', 'threetone-alert');
@@ -158,7 +158,7 @@ export class App {
         app.state.markActive();
         app.history.navigate(url, true);
     }
-    renderPage(view: HumanView.HumanView<any>, animation?: unknown) {
+    renderPage(view: HumanView<any>, animation?: unknown) {
         const container = $('#pages');
 
         if (app.currentPage) {

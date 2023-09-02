@@ -5,7 +5,7 @@ if (localStorage.authFailed) {
     localStorage.removeItem('authFailed');
 }
 
-document.getElementById('login-form')!.addEventListener('submit', function (e) {
+document.getElementById('login-form')!.addEventListener('submit', (e) => {
     function value(id: string) {
         const el = document.getElementById(id);
         return el && 'value' in el ? el.value as string : '';

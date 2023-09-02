@@ -95,9 +95,14 @@
       "request": "launch",
       "webRoot": "${workspaceFolder}/src/ts",
       "url": "http://localhost:8000/",
+      "sourceMaps": true,
       "sourceMapPathOverrides": {
         "webpack:///./*": "${webRoot}/*"
-      }
+      },
+      "skipFiles": [
+        "node_modules/@babel/runtime/node_modules/@babel/runtime/helpers/regeneratorRuntime.js",
+        "<path_to_regenerator_runtime>"
+      ]
     }
   ]
 }

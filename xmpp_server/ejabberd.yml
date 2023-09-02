@@ -15,7 +15,7 @@
 ###
 
 hosts:
-  - localhost
+  - messenger
 
 loglevel: 5
 log_rotate_size: 10485760
@@ -57,7 +57,6 @@ listen:
     request_handlers:
       "/admin": ejabberd_web_admin
       "/api": mod_http_api
-      "/bosh": mod_bosh
       "/captcha": ejabberd_captcha
       "/upload": mod_http_upload
       "/ws": ejabberd_http_ws
@@ -68,7 +67,11 @@ listen:
     module: ejabberd_http
     request_handlers:
       "/admin": ejabberd_web_admin
+      "/api": mod_http_api
+      "/captcha": ejabberd_captcha
+      "/upload": mod_http_upload
       "/ws": ejabberd_http_ws
+      "/oauth": ejabberd_oauth
   -
     port: 1883
     ip: "::"
@@ -137,19 +140,20 @@ acl:
       - ::FFFF:127.0.0.1/128
   admin:
     user:
-      - "admin@localhost"
+      - "admin@messenger"
 
 access_rules:
   local:
     allow: local
   c2s:
     deny: blocked
-    allow: all
+    allow: local
   announce:
     allow: admin
   configure:
     allow: admin
   muc_create:
+    deny: blocked
     allow: local
   pubsub_createnode:
     allow: local
@@ -221,7 +225,7 @@ modules:
   mod_fail2ban: {}
   mod_http_api: {}
   mod_http_upload:
-    put_url: https://@HOST@:5443/upload
+    put_url: https://@HOST@:5080/upload
   mod_last: {}
   mod_mam:
     ## Mnesia is limited to 2GB, better to use an SQL backend
@@ -232,6 +236,7 @@ modules:
     default: never
   mod_mqtt: {}
   mod_muc:
+    host: "conference.@HOST@"
     access:
       - allow
     access_admin:
@@ -242,7 +247,7 @@ modules:
       - allow
     default_room_options:
       allow_subscription: true  # enable MucSub
-      mam: false
+      mam: true
   mod_muc_admin: {}
   mod_offline:
     access_max_user_messages: max_user_offline_messages

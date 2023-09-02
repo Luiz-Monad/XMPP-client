@@ -11,10 +11,10 @@
   },
   "server": {
     "name": "Kaiwa",
-    "domain": "example.com",
-    "wss": "wss://192.168.0.70:5280/ws/",
+    "domain": "localhost",
+    "muc": "localhost",
+    "wss": "ws://192.168.0.70:5280/ws/",
     "securePasswordStorage": true,
-    "muc": "chat.example.com",
     "startup": "http://192.168.0.70:5280/admin",
     "admin": "admin",
     "gravatar": false,

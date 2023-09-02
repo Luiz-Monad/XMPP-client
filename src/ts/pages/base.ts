@@ -1,6 +1,7 @@
 
 import _ from 'underscore';
-import HumanView from 'human-view';
+
+import HumanView from '../helpers/human-view';
 
 const BasePage = HumanView.extend({
     props: {

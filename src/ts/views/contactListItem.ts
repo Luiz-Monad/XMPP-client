@@ -1,8 +1,9 @@
 
 import _ from 'underscore';
-import HumanView from 'human-view';
+
 import templates from 'templates';
 import { ContactType } from '../models/contact';
+import HumanView from '../helpers/human-view';
 
 export default HumanView.extend<ContactType>().extend({
     template: templates.includes.contactListItem,

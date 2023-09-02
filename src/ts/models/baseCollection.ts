@@ -1,6 +1,6 @@
 
-// our base collection
 import Backbone from 'backbone';
+
 import { JID } from './jid';
 
 type ValidDefinitionBase = {
@@ -51,6 +51,7 @@ export interface BackboneCollectionConstructor<
 
 const BackboneCollection: BackboneCollectionConstructor = Backbone.Collection;
 
+// our base collection
 const BaseCollection = BackboneCollection.extend({
 
     // from human-model.

@@ -1,8 +1,9 @@
 
-import { fire } from '../helpers/railway';
+import { MUCBookmark } from 'stanza/protocol';
+
 import BaseCollection from './baseCollection';
 import MUC, { MUCType } from './muc';
-import { MUCBookmark } from 'stanza/protocol';
+import { fire } from '../helpers/railway';
 
 const MUCs = BaseCollection.extend({
     type: 'mucs',

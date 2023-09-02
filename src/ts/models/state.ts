@@ -1,5 +1,5 @@
 
-import HumanModel from 'human-model';
+import HumanModel from '../helpers/human-model';
 
 const State = HumanModel.define({
     initialize: function () {

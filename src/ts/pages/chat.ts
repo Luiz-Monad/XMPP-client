@@ -1,14 +1,15 @@
 
 import _ from 'underscore';
 import { Constants } from 'stanza';
+import { ChatState } from 'stanza/Constants';
 import StayDown from 'staydown';
+
 import BasePage from './base';
 import templates from 'templates';
 import MessageModel, { MessageType } from '../models/message';
 import embedIt from '../helpers/embedIt';
 import htmlify from '../helpers/htmlify';
 import { ContactType } from '../models/contact';
-import { ChatState } from 'stanza/Constants';
 import { ResourceType } from '../models/resource';
 
 const ChatPage = BasePage.extend<ContactType>().extend({

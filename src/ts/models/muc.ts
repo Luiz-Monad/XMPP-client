@@ -1,13 +1,13 @@
 
 import _ from 'underscore';
-import htmlify from '../helpers/htmlify';
-import HumanModel from 'human-model';
+import { DataForm } from 'stanza/protocol';
+
 import Resources from './resources';
 import Messages from './messages';
 import Message, { MessageType, idLookup } from './message';
-import { JID } from './jid';
-import { DataForm } from 'stanza/protocol';
 import { rail, fire } from '../helpers/railway';
+import htmlify from '../helpers/htmlify';
+import HumanModel from '../helpers/human-model';
 
 const MUC = HumanModel.define({
     initialize: function (attrs: { jid: string }) {

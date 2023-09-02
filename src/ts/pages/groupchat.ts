@@ -2,16 +2,17 @@
 import _ from 'underscore';
 import { Constants } from 'stanza';
 import StayDown from 'staydown';
+
 import BasePage from './base';
 import templates from 'templates';
 import MUCRosterItem from '../views/mucRosterItem';
 import MessageModel, { MessageType } from '../models/message';
-import embedIt from '../helpers/embedIt';
-import htmlify from '../helpers/htmlify';
 import { MUCType } from '../models/muc';
 import { JID } from '../models/jid';
 import { ResourceType } from '../models/resource';
 import { ContactType } from '../models/contact';
+import embedIt from '../helpers/embedIt';
+import htmlify from '../helpers/htmlify';
 
 let tempSubject = '';
 

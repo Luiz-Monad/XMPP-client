@@ -1,11 +1,12 @@
 
 import _ from 'underscore';
 import crypto from 'crypto';
-import HumanModel from 'human-model';
+
 import Call from './call';
 import Resources from './resources';
 import Messages from './messages';
 import Message, { MessageType, idLookup } from './message';
+import HumanModel from '../helpers/human-model';
 import fetchAvatar, { VCardSource, VCardType } from '../helpers/fetchAvatar';
 import { fire } from '../helpers/railway';
 

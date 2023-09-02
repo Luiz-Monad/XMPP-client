@@ -1,5 +1,5 @@
 
-import HumanModel from 'human-model';
+import HumanModel from '../helpers/human-model';
 import fetchAvatar, { VCardSource, VCardType } from '../helpers/fetchAvatar';
 import { fire } from '../helpers/railway';
 

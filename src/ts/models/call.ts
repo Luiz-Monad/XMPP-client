@@ -1,6 +1,7 @@
 
 import _ from 'underscore';
-import HumanModel from 'human-model';
+
+import HumanModel from '../helpers/human-model';
 
 // break definition recursion
 class Contact {

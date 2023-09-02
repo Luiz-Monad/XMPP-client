@@ -1,5 +1,4 @@
 
-import async from 'async';
 import BaseCollection from './baseCollection';
 import Contact, { ContactType } from './contact';
 

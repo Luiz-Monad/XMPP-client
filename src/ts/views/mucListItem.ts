@@ -1,8 +1,9 @@
 
 import _ from 'underscore';
-import HumanView from 'human-view';
+
 import templates from 'templates';
 import { MUCType } from '../models/muc';
+import HumanView from '../helpers/human-view';
 
 export default HumanView.extend<MUCType>().extend({
     template: templates.includes.mucListItem,

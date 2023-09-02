@@ -1,11 +1,11 @@
-/*global app, me*/
 
 import _ from 'underscore';
 import uuid from 'node-uuid';
-import HumanModel from 'human-model';
+
 import templates from 'templates';
-import htmlify from '../helpers/htmlify';
 import { JID } from './jid';
+import HumanModel from '../helpers/human-model';
+import htmlify from '../helpers/htmlify';
 import { fire } from '../helpers/railway';
 
 export class Delay {

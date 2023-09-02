@@ -1,10 +1,10 @@
 
-import HumanView from 'human-view';
 import templates from 'templates';
 import ContactListItem from '../views/contactListItem';
 import MUCListItem from '../views/mucListItem';
 import ContactRequestItem from '../views/contactRequest';
 import { StateType } from '../models/state';
+import HumanView from '../helpers/human-view';
 
 export default HumanView.extend<StateType>().extend({
     template: templates.body,

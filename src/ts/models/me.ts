@@ -1,18 +1,19 @@
 
-import HumanModel from 'human-model';
 import getUserMedia from 'getusermedia';
 import { PresenceShow } from 'stanza/Constants';
 import { Presence } from 'stanza/protocol';
 import crypto from 'crypto';
 import resample from 'resampler';
+
 import Contacts from './contacts';
 import Calls from './calls';
 import Contact, { ContactType } from './contact';
 import MUCs from './mucs';
 import ContactRequests from './contactRequests';
+import { JID } from './jid';
 import fetchAvatar, { VCardSource, VCardType } from '../helpers/fetchAvatar';
 import { fire, rail } from '../helpers/railway';
-import { JID } from './jid';
+import HumanModel from '../helpers/human-model';
 
 const Me = HumanModel.define({
     initialize: function (opts?: { avatarID?: string }) {

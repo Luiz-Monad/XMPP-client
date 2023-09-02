@@ -1,9 +1,10 @@
 
 import _ from 'underscore';
-import HumanView from 'human-view';
+
 import templates from 'templates';
 import { CallType } from '../models/call';
 import { ContactType } from '../models/contact';
+import HumanView from '../helpers/human-view';
 
 export default HumanView.extend<CallType>().extend({
     template: templates.includes.call,

@@ -1,7 +1,7 @@
 
-import { MeType } from '../models/me';
 import BasePage from './base';
 import templates from 'templates';
+import { MeType } from '../models/me';
 
 const SettingsPage = BasePage.extend<MeType>().extend({
     template: templates.pages.settings,

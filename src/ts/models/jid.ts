@@ -1,3 +1,4 @@
+
 import { ParsedJID, parse } from 'stanza/JID';
 
 export class JID implements ParsedJID {

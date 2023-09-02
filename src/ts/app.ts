@@ -7,6 +7,7 @@ import Notify from 'notify.js';
 import url from 'url';
 import SoundEffectManager from 'sound-effect-manager';
 
+import { HumanView } from './types/human-view';
 import { Profile } from './storage/profile';
 import State, { StateType } from './models/state';
 import Me from './models/me';
@@ -16,9 +17,7 @@ import Router from './router';
 import AppStorage from './storage';
 import xmppEventHandlers from './helpers/xmppEventHandlers';
 import pushNotifications from './helpers/pushNotifications';
-import HumanView from 'human-view';
 import { fire, rail } from './helpers/railway';
-import { promisify } from 'util';
 
 export class App {
     config: StanzaIO.AgentConfig = <StanzaIO.AgentConfig>{};

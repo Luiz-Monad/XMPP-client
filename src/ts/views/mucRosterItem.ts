@@ -1,8 +1,9 @@
 
 import _ from 'underscore';
-import HumanView from 'human-view';
+
 import templates from 'templates';
 import { ResourceType } from '../models/resource';
+import HumanView from '../helpers/human-view';
 
 export default HumanView.extend<ResourceType>().extend({
     template: templates.includes.mucRosterItem,

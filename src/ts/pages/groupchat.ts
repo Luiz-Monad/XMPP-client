@@ -98,7 +98,7 @@ const GroupChatPage = BasePage.extend<MUCType>().extend({
 
         this.renderAndBind();
         this.$chatInput = this.$('.chatBox textarea');
-        this.$chatInput.val(app.composing[this.model.jid!] || '');
+        this.$chatInput.val(app.composing[this.model.jid] || '');
         this.$chatBox = this.$('.chatBox');
         this.$messageList = this.$('.messages');
         this.$autoComplete = this.$('.autoComplete');
@@ -159,7 +159,7 @@ const GroupChatPage = BasePage.extend<MUCType>().extend({
                 const nickname = this.$autoComplete?.find('>:nth-child(' + this.autoCompletePos + ')>:first-child')?.text();
                 this.rosterItemSelected(nickname);
             } else if (e.which === 13) {
-                app.composing[this.model.jid!] = '';
+                app.composing[this.model.jid] = '';
                 this.sendChat();
             }
             e.preventDefault();
@@ -212,7 +212,7 @@ const GroupChatPage = BasePage.extend<MUCType>().extend({
     },
     handleKeyUp: function (e: JQuery.KeyUpEvent) {
         this.resizeInput();
-        app.composing[this.model.jid!] = this.$chatInput?.val()?.toString() ?? '';
+        app.composing[this.model.jid] = this.$chatInput?.val()?.toString() ?? '';
         if (this.typing && this.$chatInput?.val()?.toString()?.length === 0) {
             this.typing = false;
             this.paused = false;
@@ -318,14 +318,16 @@ const GroupChatPage = BasePage.extend<MUCType>().extend({
                 message.replace = this.model.lastSentMessage?.mid || this.model.lastSentMessage?.cid;
             }
 
-            const id = client.sendMessage(message);
+            const mid = client.sendMessage(message);
+            const from = JID.parse(this.model.jid + '/' + this.model.nick);
+            const to = JID.parse(message.to!);
 
-            const mid = id;
-            const from = this.model.jid + '/' + this.model.nick;
-
-            const msgModel = new MessageModel(message);
-            msgModel.from = JID.parse(from);
-            msgModel.mid = mid;
+            const msgModel = new MessageModel({
+                ...message,
+                mid: mid,
+                from: from,
+                to: to,
+            });
 
             if (this.editMode) {
                 this.model.lastSentMessage?.correct(msgModel);
@@ -347,7 +349,7 @@ const GroupChatPage = BasePage.extend<MUCType>().extend({
         let subject = e.target.textContent;
         if (subject === '')
             subject = true;
-        client.setSubject(this.model.jid!, subject);
+        client.setSubject(this.model.jid, subject);
         e.target.textContent = tempSubject;
     },
     keyDownStatusChange: function (e: JQuery.KeyDownEvent) {

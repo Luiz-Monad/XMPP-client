@@ -1,2 +1,2 @@
 
-declare module 'staydown'
+declare module 'staydown';

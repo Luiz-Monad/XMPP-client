@@ -23,17 +23,17 @@ export default HumanView.extend<MUCType>().extend({
         'click .remove': 'handleLeaveRoom',
     },
     render: function () {
-        this.renderAndBind({contact: this.model});
+        this.renderAndBind({ contact: this.model });
         return this;
     },
     handleClick: function (e: JQuery.ClickEvent) {
-        app.navigate('groupchat/' + encodeURIComponent(this.model.jid ?? ''));
+        app.navigate('groupchat/' + encodeURIComponent(this.model.jid));
     },
     handleJoinRoom: function (e: JQuery.ClickEvent) {
         this.model.join();
     },
     handleLeaveRoom: function (e: JQuery.ClickEvent) {
-        const  muc = this.model;
-	    muc.leave();
+        const muc = this.model;
+        muc.leave();
     },
 });

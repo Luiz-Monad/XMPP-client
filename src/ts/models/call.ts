@@ -6,7 +6,7 @@ import HumanModel from '../helpers/human-model';
 // break definition recursion
 class Contact {
     jid: string = '';
-    onCall: boolean = false;
+    onCall?: boolean = false;
 }
 
 const Call = HumanModel.define({

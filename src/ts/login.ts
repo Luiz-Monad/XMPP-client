@@ -51,7 +51,8 @@ document.getElementById('login-form')!.addEventListener('submit', (e) => {
             password: password,
         },
         //TODO:: saveCredentials: !publicComputer, 
-        softwareVersion: softwareVersion
+        softwareVersion: softwareVersion,
+        timeout: 3,
     };
     localStorage.config = JSON.stringify(config);
 

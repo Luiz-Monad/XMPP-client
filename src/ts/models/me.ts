@@ -129,6 +129,7 @@ const Me = HumanModel.define({
         const sdata = data;
         const self = this;
         fire(async () => {
+            await app.whenConnected();
             const data = await new Promise<string>((ok, err) => resample(sdata, 80, 80, ok));
             const b64 = data.split(',');
             const b64Type = b64[0];
@@ -283,11 +284,12 @@ const Me = HumanModel.define({
         const self = this;
         fire(async () => {
             const data = {
-                jid: this.jid.bare,
-                avatarID: this.avatarID,
-                status: this.status,
-                rosterVer: this.rosterVer,
-                soundEnabled: this.soundEnabled
+                storageId: self.jid.bare,
+                jid: self.jid,
+                avatarID: self.avatarID,
+                status: self.status,
+                rosterVer: self.rosterVer,
+                soundEnabled: self.soundEnabled
             };
             await app.storage.profiles.set(data);
         });

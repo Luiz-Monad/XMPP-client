@@ -16,3 +16,12 @@ export function fire<T>(input: (() => Promise<T>) | Promise<T>) {
         console.error('UNCAUGHT: ', err);
     });
 }
+
+export function timer(onFire: (() => Promise<void>), intervalMs: number) {
+    function getInterval() {
+        if (!client.sessionStarted) return;
+        fire(onFire);
+        setTimeout(getInterval, intervalMs);
+    }
+    getInterval();
+}

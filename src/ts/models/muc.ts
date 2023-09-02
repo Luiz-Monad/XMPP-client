@@ -2,6 +2,7 @@
 import _ from 'underscore';
 import { DataForm } from 'stanza/protocol';
 
+import { JID } from './jid';
 import Resources from './resources';
 import Messages from './messages';
 import Message, { MessageType, idLookup } from './message';
@@ -26,7 +27,7 @@ const MUC = HumanModel.define({
         autoJoin: ['bool', false, false],
         nick: 'string',
         avatar: 'string',
-        jid: 'string',
+        jid: ['string', true],
     },
     session: {
         subject: 'string',
@@ -44,7 +45,7 @@ const MUC = HumanModel.define({
             deps: ['name', 'jid'],
             fn: function () {
                 let disp = this.name;
-                if (!disp) disp = this.jid ?? '';
+                if (!disp) disp = this.jid;
                 return disp.split('@')[0];
             }
         },
@@ -129,7 +130,7 @@ const MUC = HumanModel.define({
                     body: message.body,
                     icon: this.avatar,
                     tag: this.id,
-                    onclick: _.bind(app.navigate, app, '/groupchat/' + encodeURIComponent(this.jid ?? ''))
+                    onclick: _.bind(app.navigate, app, '/groupchat/' + encodeURIComponent(this.jid))
                 });
                 if (me.soundEnabled)
                     app.soundManager.play('threetone-alert');
@@ -173,14 +174,14 @@ const MUC = HumanModel.define({
             self.messages.reset();
             self.resources.reset();
 
-            await client.joinRoom(self.jid, self.nick, {
+            fire(client.joinRoom(self.jid, self.nick, {
                 muc: {
                     type: 'join',
                     history: {
                         maxStanzas: 50
                     },
                 }
-            });
+            }));
 
             if (manual) {
                 const form: DataForm = {
@@ -207,14 +208,13 @@ const MUC = HumanModel.define({
 
                 if (SERVER_CONFIG.domain && SERVER_CONFIG.admin) {
                     const jid = self.jid;
-                    const [err] = await rail(client.setRoomAffiliation(jid,
+                    const [err2] = await rail(client.setRoomAffiliation(jid,
                         SERVER_CONFIG.admin + '@' + SERVER_CONFIG.domain,
                         'owner', 'administration'));
-                    if (!err) {
-                        const [err] = await rail(client.setRoomAffiliation(jid,
-                            me.jid.bare, 'none', 'administration'));
-                        if (err) console.warn(err);
-                    }
+                    if (err2) console.warn(err2);
+                    const [err3] = await rail(client.setRoomAffiliation(jid,
+                        me.jid.bare, 'none', 'administration'));
+                    if (err3) console.warn(err3);
                 }
             }
 
@@ -281,10 +281,15 @@ const MUC = HumanModel.define({
                     if (original && original.correct(msg)) return;
                 }
 
-                const message = new Message(msg);
-                message.mid = mid;
-                message.archivedId = result.id;
-                message.acked = true;
+                const message = new Message({
+                    ...msg,
+                    mid: mid,
+                    from: JID.parse(msg.from!),
+                    to: JID.parse(msg.to!),
+                    archivedId: result.id,
+                    acked: true,
+                    receipt: !!msg.receipt,
+                });
 
                 self.addMessage(message, false);
             });

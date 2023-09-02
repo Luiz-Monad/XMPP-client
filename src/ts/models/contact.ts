@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import Call from './call';
 import Resources from './resources';
 import Messages from './messages';
+import { JID } from './jid';
 import Message, { MessageType, idLookup } from './message';
 import HumanModel from '../helpers/human-model';
 import fetchAvatar, { VCardSource, VCardType } from '../helpers/fetchAvatar';
@@ -382,10 +383,15 @@ const Contact = HumanModel.define({
                     if (original && original.correct(msg)) return;
                 }
 
-                const message = new Message(msg);
-                message.mid = mid;
-                message.archivedId = result.id;
-                message.acked = true;
+                const message = new Message({
+                    ...msg,
+                    mid: mid,
+                    from: JID.parse(msg.from!),
+                    to: JID.parse(msg.to!),
+                    archivedId: result.id,
+                    acked: true,
+                    receipt: !!msg.receipt,
+                });
 
                 self.addMessage(message, false);
             });

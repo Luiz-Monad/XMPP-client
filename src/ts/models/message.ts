@@ -21,7 +21,7 @@ export class URI {
     source?: string;
 }
 
-const ID_CACHE: Record<string, Record<string, any>> = {};
+const ID_CACHE: Record<string, Record<string, MessageType>> = {};
 
 const Message = HumanModel.define({
     initialize: function (attrs: unknown) {
@@ -217,12 +217,14 @@ const Message = HumanModel.define({
         delay: Delay,
         mentions: ['array', false, [], 'string'],
     },
-    correct: function (msg: { from?: JID; id?: unknown }) {
-        if (this.from?.full !== msg.from?.full) return false;
+    correct: function (msg: { from?: string | JID; id?: unknown }) {
+        const from = (typeof msg?.from === 'string')
+            ? JID.parse(msg.from) : msg.from;
+        if (this.from?.full !== from) return false;
 
         delete msg.id;
 
-        this.set(msg);
+        this.set({ ...msg, from: from });
         this._edited = new Date(Date.now() + app.timeInterval);
         this.edited = true;
 
@@ -280,7 +282,7 @@ export const idLookup = function (jid: string, mid?: string) {
     return cache[mid!];
 };
 
-export const idStore = function (jid: string, mid: string, msg: any) {
+export const idStore = function (jid: string, mid: string, msg: MessageType) {
     const cache = ID_CACHE[jid] || (ID_CACHE[jid] = {});
     cache[mid] = msg;
 };

@@ -131,53 +131,50 @@ export default function (client: StanzaIO.Agent, app: App) {
 
         app.state.connected = true;
 
-        fire(Promise.all([
-            async () => {
-                const resp = await client.getRoster();
-                if (resp && resp.items && resp.items.length) {
-                    const [err] = await rail(app.storage.roster.clear());
+        fire(async () => {
+            const resp = await client.getRoster();
+            if (resp && resp.items && resp.items.length) {
+                const [err] = await rail(app.storage.roster.clear());
+                if (err) console.warn(err);
+                else {
+                    me.contacts.reset();
+                    me.rosterVer = resp.version;
+
+                    resp.items.forEach((item) => {
+                        me.setContact(item, true);
+                    });
+                }
+            }
+
+            const caps = client.updateCaps();
+            if (caps) {
+                const features = client.getCurrentCaps()?.info?.features ?? [];
+                const [err] = await rail(app.storage.disco.add(features));
+                if (err) console.warn(err);
+                else {
+                    client.sendPresence({
+                        status: me.status,
+                        legacyCapabilities: Object.values(client.disco.caps),
+                    });
+                    const [err] = await rail(client.enableCarbons());
                     if (err) console.warn(err);
-                    else {
-                        me.contacts.reset();
-                        me.rosterVer = resp.version;
-
-                        resp.items.forEach((item) => {
-                            me.setContact(item, true);
-                        });
-                    }
                 }
+            }
 
-                const caps = client.updateCaps();
-                if (caps) {
-                    const features = client.getCurrentCaps()?.info?.features ?? [];
-                    const [err] = await rail(app.storage.disco.add(features));
-                    if (err) console.warn(err);
-                    else {
-                        client.sendPresence({
-                            status: me.status,
-                            legacyCapabilities: Object.values(client.disco.caps),
-                        });
-                        const [err] = await rail(client.enableCarbons());
-                        if (err) console.warn(err);
-                    }
-                }
+            await me.mucs.fetch();
+        })
 
-                await me.mucs.fetch();
-            },
+        fire(async () => {
+            const srv = await client.discoverICEServers();
+            console.debug(srv);
+        });
 
-            async () => {
-                const srv = await client.discoverICEServers();
-                console.debug(srv);
-            },
-
-            async () => {
-                const keepalive = SERVER_CONFIG.keepalive;
-                if (keepalive) {
-                    client.enableKeepAlive(keepalive);
-                }
-            },
-
-        ]));
+        fire(async () => {
+            const keepalive = SERVER_CONFIG.keepalive;
+            if (keepalive) {
+                client.enableKeepAlive(keepalive);
+            }
+        });
     });
 
     client.on('roster:update', (iq) => {
@@ -235,8 +232,8 @@ export default function (client: StanzaIO.Agent, app: App) {
                 resource.fetchTimezone();
             }
 
-            const muc = pres.muc!;
-            if (muc.type === 'info' && muc.statusCodes && muc.statusCodes.indexOf('110') >= 0) {
+            const muc = pres.muc;
+            if (muc?.type === 'info' && muc.statusCodes && muc.statusCodes.indexOf('110') >= 0) {
                 contact.joined = true;
             }
         }
@@ -324,8 +321,14 @@ export default function (client: StanzaIO.Agent, app: App) {
 
         const contact = me.getContact(msg.from, msg.to);
         if (contact && !msg.replace) {
-            const message = new Message(msg);
-            message.mid = mid;
+            const message = new Message({
+                ...msg,
+                mid: mid,
+                from: JID.parse(msg.from!),
+                to: JID.parse(msg.to!),
+                acked: true,
+                receipt: !!msg.receipt,
+            });
 
             if (msg.archive) {
                 if (me.isMe(msg.archive.item.message?.from)) {
@@ -352,9 +355,14 @@ export default function (client: StanzaIO.Agent, app: App) {
 
         const contact = me.getContact(msg.from, msg.to);
         if (contact && !msg.replace) {
-            const message = new Message(msg);
-            message.mid = mid;
-            message.acked = true;
+            const message = new Message({
+                ...msg,
+                mid: mid,
+                from: JID.parse(msg.from!),
+                to: JID.parse(msg.to!),
+                acked: true,
+                receipt: !!msg.receipt,
+            });
             const localTime = new Date(Date.now() + app.timeInterval);
             const notify = Math.round((localTime.getMilliseconds() - (message.created?.getMilliseconds() ?? 0)) / 1000) < 5;
             contact.addMessage(message, notify);

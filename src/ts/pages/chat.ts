@@ -6,6 +6,7 @@ import StayDown from 'staydown';
 
 import BasePage from './base';
 import templates from 'templates';
+import { JID } from '../models/jid';
 import MessageModel, { MessageType } from '../models/message';
 import embedIt from '../helpers/embedIt';
 import htmlify from '../helpers/htmlify';
@@ -224,13 +225,15 @@ const ChatPage = BasePage.extend<ContactType>().extend({
             client.sendMessage(message);
 
             // Prep message to create a Message model
-            const from = me.jid;
             const mid = message.id;
             delete message.id;
 
-            const msgModel = new MessageModel(message);
-            msgModel.from = from;
-            msgModel.mid = mid;
+            const msgModel = new MessageModel({
+                ...message,
+                mid: mid,
+                from: me.jid,
+                to: JID.parse(message.to!),
+            });
 
             if (this.editMode) {
                 this.model.lastSentMessage?.correct(msgModel);

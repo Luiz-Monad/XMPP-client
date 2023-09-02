@@ -1,10 +1,6 @@
 
 import { _StringKey, Collection } from 'backbone';
 
-export type Attributes = Record<string, any>;
-
-export type Options = Record<string, any>;
-
 type PropTypeMapping = {
     'string': string;
     'array': object[];
@@ -188,13 +184,17 @@ export interface HumanModel<
 
 export type DefineFnType = typeof define;
 
+export type Attributes<T> = Partial<ModelDefinition<T>>;
+
+export type Options = Record<string, any>;
+
 function define<
     Spec extends ValidDefinition<Spec>
 >
     (spec:
         Spec &
         ThisType<ModelDefinition<Spec> & HumanModel<ModelDefinition<Spec>>>
-    ): new (attrs?: Attributes, options?: Options) =>
+    ): new (attrs?: Attributes<Spec>, options?: Options) =>
         ModelDefinition<Spec> & HumanModel<ModelDefinition<Spec>>;
 
 export type RegistryType = new () => Registry;

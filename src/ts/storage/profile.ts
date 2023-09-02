@@ -1,9 +1,12 @@
+
+import { JID } from '../models/jid';
 import Storage from './index'
 
 type ProfileId = string;
 
 export type Profile = {
-    jid: ProfileId;
+    storageId: ProfileId;
+    jid: JID;
     name?: string;
     avatarID?: string;
     status?: string;
@@ -21,7 +24,7 @@ class ProfileStorage {
             db.deleteObjectStore('profiles');
         }
         db.createObjectStore('profiles', {
-            keyPath: 'jid'
+            keyPath: 'storageId'
         });
     };
     transaction(mode: IDBTransactionMode) {

@@ -3,6 +3,7 @@ import _ from 'underscore';
 import { Constants } from 'stanza';
 import { ChatState } from 'stanza/Constants';
 import StayDown from 'staydown';
+import Sugar from 'sugar';
 
 import BasePage from './base';
 import templates from 'templates';
@@ -268,10 +269,12 @@ const ChatPage = BasePage.extend<ContactType>().extend({
         }
     },
     appendModel: function (model: MessageType, preload?: boolean) {
-        const msgDate = Date.create(model.timestamp!);
-        const messageDay = msgDate.format('{month} {ord}, {yyyy}');
+        const msgDate = Sugar.Date(model.timestamp!);
+        const messageDay = msgDate.format('{month} {dd}, {yyyy}').toString();
 
-        if (this.firstModel === undefined || msgDate > new Date(this.firstModel.timestamp!)) {
+        if (this.firstModel === undefined ||
+            msgDate.getMilliseconds() >
+            Sugar.Date(this.firstModel.timestamp!).getMilliseconds()) {
             if (this.firstModel === undefined) {
                 this.firstModel = model;
                 this.firstDate = messageDay;

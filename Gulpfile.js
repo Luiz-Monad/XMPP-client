@@ -39,6 +39,7 @@ const configTask = task('config');
 const manifestTask = task('manifest');
 const jadeTemplatesTask = task('jadeTemplates');
 const jadeViewsTask = task('jadeViews');
+const jadeCompileTask = task('jadeCompile');
 const jadeTask = task('jade');
 const cssTask = task('css');
 const concatCssTask = task('concatCss');
@@ -83,7 +84,7 @@ resourcesTask(() => (cb) => {
         .on('end', cb);
 });
 
-clientTask(() => parallel(jadeTemplatesTask(), jadeViewsTask(), webpackTask()));
+clientTask(() => parallel(jadeTask(), webpackTask()));
 
 configTask(() => (cb) => {
     const config = getConfig();
@@ -130,13 +131,15 @@ manifestTask(() => (cb) => {
     });
 });
 
+jadeTask(() => parallel(jadeTemplatesTask(), jadeViewsTask()));
+
 jadeTemplatesTask(() => (cb) => {
     templatizer('./src/jade/templates', './src/js/templates.js', cb);
 });
 
-jadeViewsTask(() => series(cssTask(), jadeTask()));
+jadeViewsTask(() => series(cssTask(), jadeCompileTask()));
 
-jadeTask(() => (cb) => {
+jadeCompileTask(() => (cb) => {
     const config = getConfig();
     src([
         './src/jade/views/*',
@@ -242,6 +245,7 @@ exports.config = configTask();
 exports.manifest = manifestTask();
 exports.jadeTemplates = jadeTemplatesTask();
 exports.jadeViews = jadeViewsTask();
+exports.jadeCompile = jadeCompileTask();
 exports.jade = jadeTask();
 exports.css = cssTask();
 exports.concatCss = concatCssTask();

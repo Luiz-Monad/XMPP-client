@@ -1,6 +1,16 @@
 const webpack = require('webpack');
 const path = require('path');
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+const ts = require('typescript');
+
+const tsconfigPath = path.resolve(__dirname, 'tsconfig.json');
+const tsconfig = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
+const tsoptions = tsconfig.config.compilerOptions;
+const jsLibraries = Object.entries(tsoptions.paths);
+const aliases = {};
+for (const [key, value] of jsLibraries) {
+    aliases[key] = path.resolve(path.posix.join(__dirname, tsoptions.baseUrl, value[0]));
+}
 
 module.exports = (env, argv) => {
     const mode = argv.mode;
@@ -19,11 +29,7 @@ module.exports = (env, argv) => {
                 util: false,
                 assert: false,
             },
-            alias: {
-                'parselinks': path.resolve(__dirname, './src/js/libraries/parselinks.js'),
-                'resampler': path.resolve(__dirname, './src/js/libraries/resampler.js'),
-                'templates': path.resolve(__dirname, './src/js/templates.js')
-            },
+            alias: aliases,
         },
 
         context: path.join(__dirname, './src/ts'),
@@ -52,7 +58,6 @@ module.exports = (env, argv) => {
                 _: 'underscore',
                 $: 'jquery',
                 jQuery: 'jquery',
-                jQueryOem: path.join(__dirname, './src/js/libraries/jquery.oembed.js'),
             }),
             new webpack.LoaderOptionsPlugin({
                 debug: true
@@ -101,7 +106,7 @@ module.exports = (env, argv) => {
                         {
                             loader: 'ts-loader',
                             options: {
-                                configFile: path.join(__dirname, './tsconfig.json'),
+                                configFile: tsconfigPath,
                                 // transpileOnly: true
                             },
                         },
@@ -132,4 +137,3 @@ module.exports = (env, argv) => {
         },
     };
 };
-

@@ -16,6 +16,9 @@
     "removeComments": true,
     "baseUrl": "./src/js",
     "paths": {
+      "jquery_oembed": [
+        "libraries/jquery.oembed.js"
+      ],
       "parselinks": [
         "libraries/parselinks.js"
       ],

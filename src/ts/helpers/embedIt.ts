@@ -1,4 +1,6 @@
 
+import 'jquery_oembed';
+
 export default function ($html: JQuery, cb?: () => void) {
     cb = cb || function () { };
 

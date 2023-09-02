@@ -1,6 +1,7 @@
 
 import _ from 'underscore';
 import uuid from 'node-uuid';
+import Sugar from 'sugar';
 
 import templates from 'templates';
 import { JID } from './jid';
@@ -147,7 +148,7 @@ const Message = HumanModel.define({
             deps: ['edited', 'pending', 'body', 'urls'],
             cache: false,
             fn: function () {
-                const model = { message: this, messageDate: Date.create(this.timestamp!), firstEl: true };
+                const model = { message: this, messageDate: Sugar.Date(this.timestamp!), firstEl: true };
                 if (this.type === 'groupchat') {
                     return templates.includes.mucWrappedMessage(model);
                 } else {
@@ -233,7 +234,7 @@ const Message = HumanModel.define({
         return true;
     },
     bareMessageTemplate: function (firstEl: any) {
-        const model = { message: this, messageDate: Date.create(this.timestamp!), firstEl: firstEl };
+        const model = { message: this, messageDate: Sugar.Date(this.timestamp!), firstEl: firstEl };
         if (this.type === 'groupchat') {
             return templates.includes.mucBareMessage(model);
         } else {
